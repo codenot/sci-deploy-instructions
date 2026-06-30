@@ -1,8 +1,10 @@
-# 新机器服务部署手册
+# 部署手册
 
-> 目标：新服务器到手后，按这份流程部署 Caddy、s-ui、Sub-Store、SillyTavern，并能完成基础验证和排障。文档中的域名、端口、路径、token、密码都用占位符表示，部署时按实际情况替换。
+> 目标：新服务器到手后，按这份流程部署 Caddy、s-ui、Sub-Store、SillyTavern，并完成基础验证。排查问题时看 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)。
 
-## 1. 约定
+文档中的域名、端口、路径、token、密码都用占位符表示，部署时按实际情况替换。不要把真实密钥、真实订阅地址、Reality private key 写进仓库。
+
+## 1. 架构和约定
 
 ### 推荐目录
 
@@ -26,12 +28,14 @@ api.example.com       -> 其他 API 服务，可选
 | 服务 | 内部端口 | 宿主机监听 | 说明 |
 |---|---:|---:|---|
 | Caddy | 80/443 | 80/443 | 公网 HTTPS 入口 |
-| s-ui 面板 | 2095 | 2095 | 可按需改 |
+| s-ui 面板 | 2095 | 2095 | 建议限制来源 IP 或只在需要时开放 |
 | s-ui 订阅 | 2096 | 2096 | 给 Sub-Store 读取 |
-| s-ui 入站 | 32676 | 32676 | 示例 VLESS 入站端口 |
+| s-ui 入站 | 32676 | 32676 | 示例 VLESS/Reality 入站端口 |
 | Sub-Store 前端 | 3001 | 127.0.0.1:3001 | 只给 Caddy 反代 |
 | Sub-Store 后端 | 3002 | 127.0.0.1:3002 | 文件/API 下载 |
 | SillyTavern | 8000 | 127.0.0.1:7123 | 只给 Caddy 反代 |
+
+如果把 s-ui Reality 入站放到 `443/tcp`，同一台机器同一个公网 IP 上 Caddy 就不能同时监听 `443/tcp`。除非有独立 IP 或明确的流量分流方案，否则按上表把 Caddy 和 s-ui 入站分开。
 
 ## 2. 基础环境
 
@@ -70,7 +74,7 @@ docker compose version
 s-ui 入站端口，例如 32676/tcp
 ```
 
-如果 s-ui 面板不走 Caddy，也要放行面板端口。但更建议限制来源 IP 或只在需要时开放。
+如果 s-ui 面板不走 Caddy，也要放行面板端口。更稳妥的做法是限制来源 IP，或只在维护窗口临时开放。
 
 ## 3. Caddy 部署
 
@@ -101,25 +105,6 @@ services:
 
 ### Caddyfile 模板
 
-```caddy
-silly.example.com {
-    reverse_proxy 127.0.0.1:7123
-}
-
-sub.example.com {
-    handle /mihomo {
-        rewrite * /api/file/mihomo-auto
-        reverse_proxy 127.0.0.1:3002
-    }
-
-    handle {
-        reverse_proxy 127.0.0.1:3001
-    }
-}
-```
-
-写入：
-
 ```bash
 cat > /opt/caddy/etc/Caddyfile <<'EOF'
 silly.example.com {
@@ -148,7 +133,7 @@ docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfi
 docker logs --tail 100 caddy
 ```
 
-新增站点时流程：
+### 新增或修改站点
 
 ```bash
 cd /opt/caddy
@@ -157,20 +142,6 @@ vim etc/Caddyfile
 docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 ```
-
-排障：
-
-```bash
-curl -vk https://silly.example.com/
-docker logs --since 5m caddy
-ss -lntup | grep -E ':80|:443'
-```
-
-常见问题：
-
-- `502`：上游端口没监听，或 Caddy 反代端口写错。
-- 证书申请失败：域名 DNS 没指到服务器，80/443 未放行，Cloudflare 代理/SSL 模式异常。
-- 改配置不生效：没有 reload，或改的是宿主机错路径。
 
 ## 4. s-ui 部署
 
@@ -219,20 +190,27 @@ Sub path: <RANDOM_SUB_PATH>
 /usr/local/s-ui/sui admin -username <USER> -password <PASSWORD>
 ```
 
-### 创建入站
+### 创建 VLESS/Reality 入站
 
-在 s-ui 面板中创建 sing-box 入站，例如：
+在 s-ui 面板中创建 sing-box 入站。推荐起点：
 
 ```text
 协议：VLESS
 端口：32676
-传输/安全：按实际网络环境选择
+安全：Reality
+server_name / SNI：www.cloudflare.com
+handshake server：www.cloudflare.com
+fingerprint：chrome
+flow：xtls-rprx-vision
 用户：创建一个或多个客户端用户
 ```
+
+保存前重新生成 Reality keypair 和 short id。不要使用 `www.microsoft.com` 作为 Reality 的 SNI 或 handshake 目标；已知会导致 `processed invalid connection` 类失败。细节看 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md#s-ui-vless-reality-真实案例)。
 
 保存后确认端口：
 
 ```bash
+systemctl restart s-ui
 ss -lntup | grep sui
 journalctl -u s-ui -n 100 --no-pager
 ```
@@ -259,6 +237,7 @@ http://127.0.0.1:2096/sub/<SUB_PATH>
 备份：
 
 ```bash
+mkdir -p /opt/s-ui-backup
 tar czf /opt/s-ui-backup/s-ui-$(date +%Y%m%d).tgz \
   /usr/local/s-ui/db \
   /etc/systemd/system/s-ui.service
@@ -271,21 +250,6 @@ systemctl daemon-reload
 systemctl enable --now s-ui
 systemctl restart s-ui
 ```
-
-排障：
-
-```bash
-systemctl status s-ui --no-pager -l
-journalctl -u s-ui -f
-ss -lntup | grep sui
-/usr/local/s-ui/sui setting -show
-```
-
-常见问题：
-
-- 面板打不开：检查面板端口、防火墙、安全组、面板 path。
-- 订阅 404：检查 `subPath` 是否正确。
-- 节点不通：检查入站端口是否监听、安全组是否开放、客户端配置是否与入站一致。
 
 ## 5. Sub-Store 部署
 
@@ -379,7 +343,7 @@ platform: ClashMeta / Mihomo
 download: true
 ```
 
-然后 Caddy 中把：
+Caddy 会把：
 
 ```text
 https://sub.example.com/mihomo
@@ -391,7 +355,7 @@ https://sub.example.com/mihomo
 /api/file/mihomo-auto
 ```
 
-客户端就订阅：
+客户端订阅：
 
 ```text
 https://sub.example.com/mihomo
@@ -405,23 +369,6 @@ cp /opt/substore/data/sub-store.json \
 
 tar czf /opt/substore-backup-$(date +%Y%m%d).tgz /opt/substore/data /opt/substore/docker-compose.yaml
 ```
-
-排障：
-
-```bash
-cd /opt/substore
-docker compose logs -f
-docker logs --tail 200 sub-store
-curl -I https://sub.example.com/mihomo
-curl -sS http://127.0.0.1:3002/api/file/mihomo-auto | head
-```
-
-常见问题：
-
-- `/mihomo` 404：Caddy rewrite 路径或 file 名称不一致。
-- 下载为空：collection 没选订阅，或远程订阅拉取失败。
-- 自建节点没出现：Sub-Store 容器没用 host network，或 s-ui subPath 写错。
-- 客户端提示格式错误：file 的 platform/模板不是 Mihomo/ClashMeta。
 
 ## 6. SillyTavern 部署
 
@@ -586,34 +533,6 @@ fetch(url, {
 NODE
 ```
 
-### Docker 出站排障
-
-如果容器内访问外网 timeout，但宿主机正常：
-
-```bash
-docker exec sillytavern node -e 'fetch("https://1.1.1.1").then(r=>console.log(r.status)).catch(console.error)'
-curl -I https://1.1.1.1
-iptables -S FORWARD
-docker network ls
-docker network inspect <SILLYTAVERN_NETWORK>
-```
-
-临时放通某个 Docker bridge 示例：
-
-```bash
-BRIDGE=br-xxxxxxxxxxxx
-iptables -I FORWARD 1 -o "$BRIDGE" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-iptables -I FORWARD 2 -i "$BRIDGE" ! -o "$BRIDGE" -j ACCEPT
-```
-
-修改前先备份：
-
-```bash
-iptables-save > /root/iptables-before-docker-egress-$(date +%Y%m%d-%H%M%S).rules
-```
-
-注意：这只是运行时规则。服务器重启后要重新确认，或用 systemd oneshot / netfilter-persistent 做持久化。
-
 ### 备份
 
 ```bash
@@ -624,13 +543,6 @@ tar czf /opt/sillytavern-backup-$(date +%Y%m%d).tgz \
   /opt/SillyTavern/extensions \
   /opt/SillyTavern/docker-compose.yml
 ```
-
-排障：
-
-- 公网 502：Caddy 反代端口写错，或 `127.0.0.1:7123` 没监听。
-- 页面显示 forbidden/unauthorized：SillyTavern whitelist 没包含 Docker gateway，或 forwarded whitelist 拦了真实客户端 IP。
-- 模型列表能拉到但生成失败：检查 API 类型是否选成 Chat Completion Custom。
-- 生成 timeout：容器出站网络、上游 API、代理、防火墙逐层测。
 
 ## 7. 全链路验证
 
@@ -649,6 +561,8 @@ docker logs --tail 100 caddy
 docker logs --tail 100 sub-store
 docker logs --tail 100 sillytavern
 ```
+
+如果验证失败，不要在部署手册里继续猜。按 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) 从链路入口逐层排查。
 
 ## 8. 修改前备份习惯
 
@@ -674,5 +588,6 @@ cp /opt/SillyTavern/docker-compose.yml /opt/SillyTavern/docker-compose.yml.bak-$
 s-ui：
 
 ```bash
+mkdir -p /opt/s-ui-backup
 tar czf /opt/s-ui-backup/s-ui-before-change-$(date +%Y%m%d-%H%M%S).tgz /usr/local/s-ui/db
 ```
