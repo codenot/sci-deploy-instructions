@@ -1,6 +1,6 @@
 # Caddy 部署
 
-> Caddy 是公网 HTTPS 入口，负责把域名反代到本机服务。基础 Docker、目录和端口约定见 [DEPLOYMENT.md](../DEPLOYMENT.md)。
+> Caddy 是公网 HTTPS 入口，负责把域名反代到本机服务。基础 Docker、目录和端口约定见 [deployment.md](../deployment.md)。
 
 ## 创建目录
 

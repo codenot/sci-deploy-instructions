@@ -4,13 +4,14 @@
 
 ## 快速入口
 
-- 部署总手册：[DEPLOYMENT.md](./DEPLOYMENT.md)
+- 部署总手册：[deployment.md](./deployment.md)
+- 线路 ASN 速查：[asn-route.md](./asn-route.md)
 - 仓库说明：[README.md](./README.md)
 - 本文件只保存 AI 操作指导和速查信息；基础 Docker、全局约定和通用排查以部署总手册为准，单服务部署和服务专属排查以 `services/` 下对应文件为准。
 
 ## AI 操作原则
 
-1. 部署或改配置任务先看 `DEPLOYMENT.md` 的基础约定，再进入 `services/` 下对应服务文件；排障任务先看 `DEPLOYMENT.md` 的通用排查，再进入对应服务文件的排查章节。
+1. 部署或改配置任务先看 `deployment.md` 的基础约定，再进入 `services/` 下对应服务文件；排障任务先看 `deployment.md` 的通用排查，再进入对应服务文件的排查章节。
 2. 涉及真实服务器、真实域名、token、密码、API key、订阅地址时，不要写入仓库；文档中只保留占位符。
 3. 修改线上配置前先备份，尤其是 Caddyfile、Sub-Store 数据、SillyTavern 配置、s-ui 数据库、Marzban 数据库和 Xray 配置、Remnawave PostgreSQL 数据。
 4. 修改后必须验证：配置校验、服务状态、端口监听、HTTP 状态码、容器日志或 systemd 日志。
@@ -32,18 +33,18 @@
 
 ## 常用任务索引
 
-- 新服务器基础环境、目录/域名/端口约定：看 `DEPLOYMENT.md`
+- 新服务器基础环境、目录/域名/端口约定：看 `deployment.md`
 - Caddy 部署、站点新增：看 `services/caddy.md`
 - s-ui 安装、面板/订阅端口、入站、备份恢复：看 `services/s-ui.md`
 - Marzban Docker 部署、面板反代、管理员、入站、备份恢复：看 `services/marzban.md`
 - Remnawave Docker 部署、面板反代、节点接入入口：看 `services/remnawave.md`
 - Sub-Store 部署、订阅聚合、`/mihomo` 重写、备份：看 `services/sub-store.md`
 - SillyTavern 部署、白名单、API 类型：看 `services/sillytavern.md`
-- 全链路健康检查：看 `DEPLOYMENT.md`「7. 全链路验证」
-- 通用链路排查和基础状态采集：看 `DEPLOYMENT.md`「8. 通用排查」
+- 全链路健康检查：看 `deployment.md`「7. 全链路验证」
+- 通用链路排查和基础状态采集：看 `deployment.md`「8. 通用排查」
 - 502、证书、404、timeout、unauthorized、节点不通：看对应 `services/*.md` 的「排查」章节
 - s-ui VLESS/Reality 真实案例：看 `services/s-ui.md`「s-ui VLESS Reality 真实案例」
-- 修改前备份命令：看 `DEPLOYMENT.md` 和对应服务文档的备份章节
+- 修改前备份命令：看 `deployment.md` 和对应服务文档的备份章节
 
 ## 修改配置时的最小流程
 

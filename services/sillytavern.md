@@ -1,6 +1,6 @@
 # SillyTavern 部署
 
-> SillyTavern 只监听本机端口，由 Caddy 反代提供公网 HTTPS。基础约定见 [DEPLOYMENT.md](../DEPLOYMENT.md)。
+> SillyTavern 只监听本机端口，由 Caddy 反代提供公网 HTTPS。基础约定见 [deployment.md](../deployment.md)。
 
 ## 创建目录
 

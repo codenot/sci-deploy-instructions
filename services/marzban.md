@@ -1,6 +1,6 @@
 # Marzban 部署
 
-> Marzban 是基于 Xray-core 的多用户面板。推荐让面板只监听 `127.0.0.1:8000`，由 Caddy 反代提供 HTTPS；节点入站端口在面板里创建后再按需开放，不要默认暴露管理端口。基础约定见 [DEPLOYMENT.md](../DEPLOYMENT.md)。
+> Marzban 是基于 Xray-core 的多用户面板。推荐让面板只监听 `127.0.0.1:8000`，由 Caddy 反代提供 HTTPS；节点入站端口在面板里创建后再按需开放，不要默认暴露管理端口。基础约定见 [deployment.md](../deployment.md)。
 
 Marzban Docker 部署按本仓库约定把 compose、配置、数据库和备份都放在 `/opt/marzban` 下，不使用会把数据放到 `/var/lib/marzban` 的默认安装路径。
 

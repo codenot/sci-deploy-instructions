@@ -1,6 +1,6 @@
 # Sub-Store 部署
 
-> Sub-Store 负责聚合机场订阅和自建节点订阅，并生成客户端使用的配置文件。基础约定见 [DEPLOYMENT.md](../DEPLOYMENT.md)。
+> Sub-Store 负责聚合机场订阅和自建节点订阅，并生成客户端使用的配置文件。基础约定见 [deployment.md](../deployment.md)。
 
 ## 创建目录
 

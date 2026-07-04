@@ -1,6 +1,6 @@
 # Remnawave 部署
 
-> Remnawave Panel 是用户、节点、订阅和配置的管理面板。Panel 本身不包含 Xray-core；实际代理流量需要单独部署 Remnawave Node，并在面板里通过 Config Profile、Host、Internal Squad 关联。基础约定见 [DEPLOYMENT.md](../DEPLOYMENT.md)。
+> Remnawave Panel 是用户、节点、订阅和配置的管理面板。Panel 本身不包含 Xray-core；实际代理流量需要单独部署 Remnawave Node，并在面板里通过 Config Profile、Host、Internal Squad 关联。基础约定见 [deployment.md](../deployment.md)。
 
 官方要求 Remnawave 服务不要直接暴露公网，面板必须通过反向代理和 HTTPS 访问。建议让 Panel 只监听 `127.0.0.1:3010`，Metrics 只监听 `127.0.0.1:3011`，由 Caddy 对外提供 `https://remnawave.example.com/`。
 

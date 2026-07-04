@@ -1,6 +1,6 @@
 # s-ui 部署
 
-> s-ui 提供面板、订阅和节点入站。基础约定见 [DEPLOYMENT.md](../DEPLOYMENT.md)。
+> s-ui 提供面板、订阅和节点入站。基础约定见 [deployment.md](../deployment.md)。
 
 ## 安装
 
