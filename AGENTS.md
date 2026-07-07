@@ -30,6 +30,7 @@
 | Remnawave Node | `/opt/remnawave-node` | 控制端口如 `2222` 只允许 Panel 访问，入站端口按配置 | 承载 Xray-core；不要把 Node 控制 API 直接暴露公网 |
 | Sub-Store | `/opt/substore` | `127.0.0.1:3001`, `127.0.0.1:3002` | 前端和后端只给 Caddy 反代 |
 | SillyTavern | `/opt/SillyTavern` | `127.0.0.1:7123` -> 容器 `8000` | 只给 Caddy 反代 |
+| Tailscale DERP | `/opt/tailscale-derp` | Caddy `443/tcp` -> 本机 `33443/tcp`，`3478/udp` | 自管 Tailscale DERP relay；上游端口不要直接暴露公网 |
 
 ## 常用任务索引
 
@@ -40,6 +41,7 @@
 - Remnawave Docker 部署、面板反代、节点接入入口：看 `services/remnawave.md`
 - Sub-Store 部署、订阅聚合、`/mihomo` 重写、备份：看 `services/sub-store.md`
 - SillyTavern 部署、白名单、API 类型：看 `services/sillytavern.md`
+- Tailscale DERP relay、Caddy TLS 反代、STUN 验证：看 `services/tailscale-derp.md`
 - 全链路健康检查：看 `deployment.md`「7. 全链路验证」
 - 通用链路排查和基础状态采集：看 `deployment.md`「8. 通用排查」
 - 502、证书、404、timeout、unauthorized、节点不通：看对应 `services/*.md` 的「排查」章节
@@ -66,4 +68,5 @@
 - 同机同时运行 Marzban Master 和 Marzban Node 会启动两个 Xray 实例，容易出现入站端口冲突；单机部署优先直接使用 Marzban Master 入站，多地区服务器再单独部署 Marzban Node。
 - Remnawave Panel 本身不跑 Xray-core；节点代理流量需要单独部署 Remnawave Node，并在面板里通过 Config Profile、Host、Internal Squad 关联。
 - Remnawave Node 的 `NODE_PORT` 是 Panel 调 Node 的控制 API，不是用户代理端口；同机 Docker 部署时也要用防火墙限制，只允许 Remnawave Panel 所在 Docker 网络或指定 Panel IP 访问。
+- Tailscale DERP 的 `33443/tcp` 是 Caddy 到 derper 的本机上游端口，不要直接暴露公网；公网只走 Caddy `443/tcp`，STUN 单独放行 `3478/udp`。
 - 对 iptables、防火墙、安全组做变更前，必须记录当前状态或备份规则。
