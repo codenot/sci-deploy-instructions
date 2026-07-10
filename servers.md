@@ -39,7 +39,7 @@
 | conviction-trade | `/opt/conviction-trade` | Docker 容器 `conviction-trade` | `127.0.0.1:3000` |
 | sub2api | `/opt/sub2api` | compose 文件存在；进程 `sub2api` 正在监听 | `*:8080` |
 | cli-proxy-api | `/opt/cli-proxy-api` | 进程 `cli-proxy-api` | `*:8317` |
-| new-api | `/opt/new-api` | compose 文件存在 | 本次采集未见运行容器，变更前先确认 |
+| new-api | `/opt/new-api` | Docker 容器 `new-api`，`network_mode: host` | 应用端口 `*:4001`；iptables 限制非 loopback 访问；Caddy 反代 `newapi.codermb.com` |
 | Tailscale | 系统包 | systemd 服务 `tailscaled` | `41641/udp`，已作为 `hk2` 自建 Headscale 的客户端接入 |
 
 ### 注意事项
@@ -50,6 +50,7 @@
 - `*:2222` 是 Remnawave Node 控制 API，不是用户代理端口。需要确认 iptables、云防火墙或安全组只允许 Panel 控制链路访问。
 - Remnawave Panel 容器网段到远程 Node 控制口走 Docker FORWARD 白名单；新增远程 Node 时需要同步增加对应出站和回包规则。
 - 同机同时存在 s-ui、Marzban、Remnawave Node 和历史 Marzban Node，新增代理入站前必须先查 `ss -lntup`，避免端口冲突。
+- `new-api` 原默认端口 `3000` 与 `conviction-trade` 冲突，当前通过 `--port 4001` 启动；公网访问走 Caddy `newapi.codermb.com` 反代到 `127.0.0.1:4001`，不要直接开放 `4001/tcp`。
 
 ## `tw`
 
@@ -172,6 +173,7 @@
 - `gz` 的 Tailscale 已从官方控制面切换到 `hk2` 自建 Headscale；客户端登录入口使用 `<HEADSCALE_DOMAIN>:<HEADSCALE_HTTPS_PORT>`，不要把真实域名或 preauth key 写入仓库。
 - `gz` 自建 DERP 已发布到 `hk2` Headscale 的 DERP map；客户端优先通过 `gz` DERP relay 中继时，继续保持上游 `33443/tcp` 不直接暴露公网。
 - Caddy 到 derper 的上游是 TLS：`https://127.0.0.1:33443`，并强制 `transport http { versions 1.1 }` 保留 `Upgrade: DERP`。
+- `router.codenot.cc` 由 `gz` Caddy 反代到 Tailscale 节点 `100.64.0.2:3000`；`gz` 到上游路由走 `tailscale0`。
 - `33443/tcp` 由 derper 监听全接口以便同时提供公网 STUN，但系统 iptables 在 `INPUT` 顶部 drop 非本机访问，防止公网绕过 Caddy 直连上游。
 - `3478/udp` 服务端已监听并且本机 Tailscale 风格 STUN 请求可用；如公网 STUN 不通，优先检查云安全组或外层防火墙是否放行 `3478/udp`。
 - Caddy 现有站点使用 `bind <PRIVATE_IP>` 风格；新增站点时不要随意改成全接口监听，避免影响既有入口。
