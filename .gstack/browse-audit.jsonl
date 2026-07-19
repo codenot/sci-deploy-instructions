@@ -1,0 +1,20 @@
+{"ts":"2026-07-15T02:13:08.309Z","cmd":"goto","args":"https://miaomiaowu.codermb.com/","origin":"https://miaomiaowu.codermb.com/","durationMs":2626,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:10.943Z","cmd":"wait","args":"--networkidle","origin":"https://miaomiaowu.codermb.com/login","durationMs":2518,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:11.056Z","cmd":"url","args":"","origin":"https://miaomiaowu.codermb.com/login","durationMs":3,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:11.170Z","cmd":"text","args":"","origin":"https://miaomiaowu.codermb.com/login","durationMs":2,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:11.304Z","cmd":"snapshot","args":"-i -c","origin":"https://miaomiaowu.codermb.com/login","durationMs":20,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:11.417Z","cmd":"console","args":"--errors","origin":"https://miaomiaowu.codermb.com/login","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:11.531Z","cmd":"network","args":"","origin":"https://miaomiaowu.codermb.com/login","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:11.646Z","cmd":"perf","args":"","origin":"https://miaomiaowu.codermb.com/login","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:11.879Z","cmd":"screenshot","args":"/tmp/miaomiaowu-login.png","origin":"https://miaomiaowu.codermb.com/login","durationMs":117,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:38.484Z","cmd":"viewport","args":"375x812","origin":"https://miaomiaowu.codermb.com/login","durationMs":4,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:38.748Z","cmd":"reload","args":"","origin":"https://miaomiaowu.codermb.com/login","durationMs":149,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:39.681Z","cmd":"wait","args":"--networkidle","origin":"https://miaomiaowu.codermb.com/login","durationMs":831,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:39.807Z","cmd":"snapshot","args":"-i -c","origin":"https://miaomiaowu.codermb.com/login","durationMs":11,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:39.923Z","cmd":"console","args":"--errors","origin":"https://miaomiaowu.codermb.com/login","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-15T02:13:40.074Z","cmd":"screenshot","args":"/tmp/miaomiaowu-login-mobile.png --viewport","origin":"https://miaomiaowu.codermb.com/login","durationMs":38,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-16T06:06:01.778Z","cmd":"goto","args":"https://grok2api.codermb.com/","origin":"https://grok2api.codermb.com/","durationMs":4002,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-16T06:07:00.569Z","cmd":"text","args":"","origin":"https://grok2api.codermb.com/","durationMs":2,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-16T06:07:09.011Z","cmd":"network","args":"","origin":"https://grok2api.codermb.com/","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-16T06:07:13.543Z","cmd":"console","args":"--errors","origin":"https://grok2api.codermb.com/","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-16T06:07:19.132Z","cmd":"perf","args":"","origin":"https://grok2api.codermb.com/","durationMs":3,"status":"ok","hasCookies":false,"mode":"launched"}

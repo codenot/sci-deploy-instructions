@@ -1,19 +1,19 @@
 # 服务器部署清单
 
-> 更新时间：2026-07-07T09:05:00Z
-> 来源：对 `kr`、`tw`、`hk`、`hk2`、`vn` 五个 SSH alias 做状态采集，并补充 `gz` 的 Tailscale DERP 部署结果、`hk2` 的 Headscale/Tailscale 部署结果、`kr`/`gz` 切换到自建 Headscale 的结果，以及 `hk2` Headscale 发布 `gz` 自建 DERP 的结果；记录包括 `hostname`、`/etc/os-release`、`docker ps`、`ss -lntup`、`systemctl is-active`、`/opt` 目录和 compose 文件路径。
+> 更新时间：2026-07-18T11:45:12Z
+> 来源：对 `kr`、`tw`、`hk`、`hk2`、`vn` 五个 SSH alias 做状态采集，并补充 `gz` 的 Tailscale DERP 部署结果、`hk2` 的 Headscale/Tailscale 部署结果、`kr`/`gz` 切换到自建 Headscale 的结果、`hk2` Headscale 发布 `gz` 自建 DERP 的结果，以及 `kr` 的 Miaomiaowu、grok2api 和 Docker 转发策略调整结果；记录包括 `hostname`、`/etc/os-release`、`docker ps`、`ss -lntup`、`systemctl is-active`、`/opt` 目录和 compose 文件路径。
 > 记录原则：本文只记录服务器 alias、服务、目录、容器名和端口用途；不要记录真实 IP、真实域名、token、密码、API key、订阅地址或 Remnawave Node `SECRET_KEY`。
 
 ## 总览
 
 | 服务器 | Hostname | OS | 角色 | 当前主要服务 |
 |---|---|---|---|---|
-| `kr` | `VM-0-10-ubuntu` | Ubuntu 24.04 | 主控/多服务服务器 | Caddy、Remnawave Panel、Remnawave Node、Marzban、s-ui、Sub-Store、SillyTavern、Tailscale、sub2api、new-api/cli-proxy-api 等 |
+| `kr` | `VM-0-10-ubuntu` | Ubuntu 24.04 | 主控/多服务服务器 | Caddy、Komari Server、Remnawave Panel、Remnawave Node、Marzban、s-ui、Sub-Store、SillyTavern、Miaomiaowu、grok2api、Tailscale、sub2api、new-api/cli-proxy-api 等 |
 | `tw` | `taiwan` | Ubuntu 24.04 | 台湾节点/辅助服务 | Remnawave Node、Hiddify Manager、sub2api、Caddy、cloudflared、Tailscale |
-| `hk` | `hongkong` | Ubuntu 20.04 | 香港节点 | Remnawave Node |
+| `hk` | `serqdqtb8vzj60u` | Ubuntu 20.04 | 香港节点 | Remnawave Node、Komari Agent |
 | `hk2` | `hongkong-annual` | Ubuntu 24.04 | 香港节点/Headscale 控制面 | Remnawave Node、Headscale、Caddy、Tailscale |
-| `vn` | `C20260320147399` | Ubuntu 24.04 | 越南节点/既有 s-ui 服务器 | Remnawave Node、s-ui、nginx |
-| `gz` | `guangzhou` | Ubuntu 24.04 | 广州辅助服务/Tailscale relay | Caddy、Tailscale、Tailscale DERP、RustDesk、Komari |
+| `vn` | `C20260320147399` | Ubuntu 24.04 | 越南节点 | Remnawave Node、nginx |
+| `gz` | `guangzhou` | Ubuntu 24.04 | 广州辅助服务/Tailscale relay | Caddy、Tailscale、Tailscale DERP、RustDesk、Komari Agent |
 
 ## `kr`
 
@@ -29,6 +29,8 @@
 | 服务 | 部署目录 | 运行形态 | 监听/暴露 |
 |---|---|---|---|
 | Caddy | `/opt/caddy` | Docker 容器 `caddy` | `*:80`、`*:443`、`127.0.0.1:2019` |
+| Komari Server | `/opt/komari` | Docker 容器 `komari`；Caddy HTTPS 反代 | `127.0.0.1:25774->25774` |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接本机 Komari HTTPS 入口；Web SSH 已禁用 |
 | Remnawave Panel | `/opt/remnawave` | Docker 容器 `remnawave`、`remnawave-db`、`remnawave-redis` | `127.0.0.1:3010->3000`、`127.0.0.1:3011->3001` |
 | Remnawave Node | `/opt/remnawave-node` | Docker 容器 `remnawave-node`，`network_mode: host` | `*:2222` 控制 API、`*:25080` 代理入站、`127.0.0.1:61081` 本地占位/内部端口 |
 | Marzban | `/opt/marzban` | Docker 容器 `marzban` | `127.0.0.1:8000` 面板上游；另有 Xray 本地端口如 `127.0.0.1:26513`、`127.0.0.1:61080` |
@@ -36,6 +38,8 @@
 | s-ui | `/usr/local/s-ui` | systemd 服务 `s-ui` | `*:2095` 面板、`*:2096` 订阅、`*:32676` 节点入站 |
 | Sub-Store | `/opt/substore` | Docker 容器 `sub-store` | `127.0.0.1:3001`、`127.0.0.1:3002` |
 | SillyTavern | `/opt/SillyTavern` | Docker 容器 `sillytavern` | `127.0.0.1:7123->8000` |
+| Miaomiaowu | `/opt/miaomiaowu` | Docker 容器 `miaomiaowu` | `127.0.0.1:8083->8080`，公网入口由 Caddy HTTPS 反代 |
+| grok2api | `/opt/grok2api` | Docker 容器 `grok2api` | `127.0.0.1:8005->8000`，公网入口由 Caddy HTTPS 反代 |
 | conviction-trade | `/opt/conviction-trade` | Docker 容器 `conviction-trade` | `127.0.0.1:3000` |
 | sub2api | `/opt/sub2api` | compose 文件存在；进程 `sub2api` 正在监听 | `*:8080` |
 | cli-proxy-api | `/opt/cli-proxy-api` | 进程 `cli-proxy-api` | `*:8317` |
@@ -48,9 +52,16 @@
 - `kr` 的 Tailscale 已从官方控制面切换到 `hk2` 自建 Headscale；客户端登录入口使用 `<HEADSCALE_DOMAIN>:<HEADSCALE_HTTPS_PORT>`，不要把真实域名或 preauth key 写入仓库。
 - 当前 `kr` 到 `hk2` 的 Tailscale 数据面可经 DERP 中继连通，直连仍需继续检查两端 `41641/udp`、云安全组和 NAT 映射。
 - `*:2222` 是 Remnawave Node 控制 API，不是用户代理端口。需要确认 iptables、云防火墙或安全组只允许 Panel 控制链路访问。
-- Remnawave Panel 容器网段到远程 Node 控制口走 Docker FORWARD 白名单；新增远程 Node 时需要同步增加对应出站和回包规则。
+- Remnawave Panel 不再依靠 Docker FORWARD 目的地址白名单访问远程 Node；容器出口不按 Docker 网段或目的地址做限制。Node 控制 API 的公网入站仍需由宿主机入口防火墙和云安全组限制。
 - 同机同时存在 s-ui、Marzban、Remnawave Node 和历史 Marzban Node，新增代理入站前必须先查 `ss -lntup`，避免端口冲突。
 - `new-api` 原默认端口 `3000` 与 `conviction-trade` 冲突，当前通过 `--port 4001` 启动；公网访问走 Caddy `newapi.codermb.com` 反代到 `127.0.0.1:4001`，不要直接开放 `4001/tcp`。
+- Miaomiaowu 的 compose、SQLite、订阅、规则模板和备份均在 `/opt/miaomiaowu`；应用端口只监听本机，Caddy 额外阻断未认证的初始化写接口。
+- `kr` 当前运行 Docker Engine `28.2.2`；IPv4 `FORWARD` 运行策略和 `/etc/iptables/rules.v4` 固化策略均为 `ACCEPT`，Docker 通过 `/etc/docker/daemon.json` 的 `ip-forward-no-drop: true` 保持该策略，同时继续自动维护 NAT 和端口映射。原 `docker-forward-open.service`、Miaomiaowu 和 Remnawave 的 Docker 出口放行服务已停用并归档，不再配置容器出口白名单。
+- Docker 发布端口经过 DNAT 后不一定进入宿主机 `INPUT` 链；需要公网访问控制时，应使用云安全组或统一的 `DOCKER-USER` 入口规则。面板和内部服务仍应绑定 `127.0.0.1`，不要依赖 `INPUT` 规则弥补错误的公网端口映射。
+- grok2api 的 compose、配置、SQLite 数据和备份均在 `/opt/grok2api`；宿主机 `8005/tcp` 只监听 `127.0.0.1`，由 Caddy 反代，不要直接暴露公网。
+- grok2api 首次启动时 `bootstrapAdmin.password` 至少需要 8 个字符；管理员创建成功后应从配置删除整个 `bootstrapAdmin` 段。`/healthz` 用于进程健康检查；尚未添加可用上游账号时 `/readyz` 返回 `503` 属于预期状态。
+- grok2api 直连 Grok Console 时可能被上游 Cloudflare WAF 按数据中心出口拦截；此时应在管理端“运行设置 -> 出口代理”配置同一浏览器会话对应的代理、User-Agent 和 Cloudflare Cookie，不要继续修改 Caddy 或 Docker FORWARD。
+- Komari Server 使用全新 SQLite 数据库，管理凭据和自动发现密钥只保存在 `/opt/komari` 且权限为 `0600`；已为全部现有及未来节点启用北京、上海、广州三地电信/联通/移动共 9 个 ICMP 延迟任务，周期为 60 秒。
 
 ## `tw`
 
@@ -70,6 +81,7 @@
 | Hiddify Manager | `/opt/hiddify-manager` | Docker 容器 `hiddify-manager`、`hiddify-mariadb`、`hiddify-redis` | `127.0.0.1:8088->80`、`127.0.0.1:8443->443` |
 | sub2api | `/opt/sub2api` | Docker 容器 `sub2api_1`、`sub2api_2`、`sub2api-postgres`、`sub2api-redis` | `0.0.0.0:8081->8080`、`0.0.0.0:8082->8080` |
 | cloudflared | systemd 服务 | 进程 `cloudflared` | `127.0.0.1:20241` 及若干 UDP 出站/隧道端口 |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
 
 ### 注意事项
 
@@ -91,6 +103,7 @@
 | 服务 | 部署目录 | 运行形态 | 监听/暴露 |
 |---|---|---|---|
 | Remnawave Node | `/opt/remnawave-node` | Docker 容器 `remnawave-node`，`network_mode: host` | `*:2222` 控制 API、`*:25080` 代理入站、`127.0.0.1:61081` 本地占位/内部端口 |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
 
 ### 注意事项
 
@@ -116,6 +129,7 @@
 | Caddy | `/opt/caddy` | Docker 容器 `caddy`，`network_mode: host` | `*:80`、`*:8443`、`127.0.0.1:2019`；反代 Headscale，上游 `127.0.0.1:8080` |
 | Tailscale | 系统包 | systemd 服务 `tailscaled` | `41641/udp`，已作为 Headscale 节点接入 |
 | Headscale DERP map | `/opt/headscale/config/derp-gz.yaml` | Headscale 本地 DERP map 文件 | 发布 `gz` 自建 DERP region，公网 DERP `443/tcp`、STUN `3478/udp` |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
 
 ### 注意事项
 
@@ -131,22 +145,23 @@
 
 - Docker：`active`
 - nginx：`active`
-- `s-ui` systemd：`active`
+- `s-ui`：已于 2026-07-14 卸载
 
 ### 已部署服务
 
 | 服务 | 部署目录 | 运行形态 | 监听/暴露 |
 |---|---|---|---|
 | Remnawave Node | `/opt/remnawave-node` | Docker 容器 `remnawave-node`，`network_mode: host` | `*:2222` 控制 API、`*:25080` 代理入站、`127.0.0.1:61081` 本地占位/内部端口 |
-| s-ui | `/usr/local/s-ui` | systemd 服务 `s-ui` | `*:2095` 面板、`*:2096` 订阅、`*:18841` 节点入站 |
 | nginx | 系统包/默认路径 | systemd 服务 `nginx` | `*:80` |
 | SSH | systemd/socket | `sshd` | `*:22958` |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
 
 ### 注意事项
 
 - `vn` 的 Remnawave Node 已接入 `kr` 的 Remnawave Panel，面板 Host 使用 `VLESS-Reality-25080` 入站，端口为 `25080`，SNI 为占位伪装域名。
 - `2222/tcp` 是 Remnawave Node 控制 API；当前系统 iptables 只允许本机回环和 `kr` Panel 出口访问，并对其他来源 drop。规则是否重启后仍存在取决于服务器防火墙持久化方式，云安全组也要保持一致。
-- `vn` 原有 nginx 与 s-ui 仍在运行，后续新增代理入站前先查 `ss -lntup`，避免与 `80`、`2095`、`2096`、`18841`、`25080` 冲突。
+- s-ui 卸载前的完整安装目录、数据库和 systemd 单元已备份到 `/opt/s-ui-backup/s-ui-uninstall-20260714-124732.tgz`，对应 SHA-256 文件保存在同目录。
+- s-ui 原使用的 `2095/tcp`、`2096/tcp` 和 `18841/tcp` 已停止监听；后续新增代理入站前仍需先查 `ss -lntup`，避免与 nginx `80/tcp` 和 Remnawave Node `25080/tcp` 冲突。
 
 ## `gz`
 
@@ -165,7 +180,7 @@
 | Tailscale DERP | `/opt/tailscale-derp` | systemd 服务 `tailscale-derp`，二进制 `/opt/tailscale-derp/bin/derper` | 公网入口由 Caddy `443/tcp` TLS 反代；上游 `33443/tcp` 仅允许本机访问；STUN `3478/udp` |
 | Tailscale | 系统包 | systemd 服务 `tailscaled` | `41641/udp`，已作为 `hk2` 自建 Headscale 的客户端接入 |
 | RustDesk Server | `/opt/rustdesk-server` | Docker 容器 `hbbs`、`hbbr` | `21115`、`21116`、`21117`、`21118`、`21119` 等 RustDesk 端口 |
-| Komari | `/opt/komari` | Docker 容器 `komari` | `*:25774` |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
 
 ### 注意事项
 
@@ -177,6 +192,7 @@
 - `33443/tcp` 由 derper 监听全接口以便同时提供公网 STUN，但系统 iptables 在 `INPUT` 顶部 drop 非本机访问，防止公网绕过 Caddy 直连上游。
 - `3478/udp` 服务端已监听并且本机 Tailscale 风格 STUN 请求可用；如公网 STUN 不通，优先检查云安全组或外层防火墙是否放行 `3478/udp`。
 - Caddy 现有站点使用 `bind <PRIVATE_IP>` 风格；新增站点时不要随意改成全接口监听，避免影响既有入口。
+- 原 Komari Server 容器、镜像、`/opt/komari` SQLite 数据和 `25774/tcp` 公网监听已于 2026-07-18 完整删除；当前只保留 Agent。
 
 ## 通用运维规则
 

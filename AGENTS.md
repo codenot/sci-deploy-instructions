@@ -18,6 +18,7 @@
 5. 不要默认扩大公网暴露面。Marzban 面板、Remnawave 面板、Sub-Store 和 SillyTavern 推荐只监听 `127.0.0.1`，由 Caddy 反代对外提供 HTTPS。
 6. Docker 服务部署根目录统一为 `/opt/<service>`，数据、配置、Caddy 配置、日志、备份分别使用 `/opt/<service>/data`、`/opt/<service>/config`、`/opt/<service>/etc`、`/opt/<service>/logs`、`/opt/<service>/backup` 等语义目录；不要使用 `docker-data` 这类额外前缀目录。
 7. 遇到 502、404、timeout、unauthorized 等问题时，按链路逐层检查：DNS/防火墙 -> Caddy -> 本机端口 -> 容器或 systemd 服务 -> 应用配置。
+8. Docker 网络统一采用“出口不设服务级限制、入口在最外层控制”的基线：先确认 Docker Engine `>= 28.0.0`，保留 Docker 自动维护的 NAT 和端口映射，IPv4 `FORWARD` 使用 `ACCEPT`，并在 `/etc/docker/daemon.json` 配置 `ip-forward-no-drop: true`。低于 28.0.0 时先升级，不要直接套用 `FORWARD ACCEPT`。不要为单个 Docker 网桥、容器网段、服务或远端目的地址创建出口白名单和 systemd oneshot；公网入口由云安全组、监听地址及必要时统一的 `DOCKER-USER` 规则控制。
 
 ## 服务速查
 
@@ -67,6 +68,10 @@
 - Marzban Docker 部署时，compose、`.env`、SQLite 数据库和 `xray_config.json` 都放在 `/opt/marzban` 下，不使用默认 `/var/lib/marzban` 数据路径。
 - 同机同时运行 Marzban Master 和 Marzban Node 会启动两个 Xray 实例，容易出现入站端口冲突；单机部署优先直接使用 Marzban Master 入站，多地区服务器再单独部署 Marzban Node。
 - Remnawave Panel 本身不跑 Xray-core；节点代理流量需要单独部署 Remnawave Node，并在面板里通过 Config Profile、Host、Internal Squad 关联。
-- Remnawave Node 的 `NODE_PORT` 是 Panel 调 Node 的控制 API，不是用户代理端口；同机 Docker 部署时也要用防火墙限制，只允许 Remnawave Panel 所在 Docker 网络或指定 Panel IP 访问。
+- Remnawave Node 的 `NODE_PORT` 是 Panel 调 Node 的控制 API，不是用户代理端口；这是入口限制，不是 Panel 容器的出口白名单。Node 使用 host 网络时在 `INPUT` 控制来源，Node 通过 Docker 发布端口时在 `DOCKER-USER` 或云安全组控制来源。
 - Tailscale DERP 的 `33443/tcp` 是 Caddy 到 derper 的本机上游端口，不要直接暴露公网；公网只走 Caddy `443/tcp`，STUN 单独放行 `3478/udp`。
 - 对 iptables、防火墙、安全组做变更前，必须记录当前状态或备份规则。
+- 不要把 Docker 的 `iptables` 功能设为 `false`，否则会破坏默认 bridge 的 NAT、端口映射和网络隔离。不要把运行中的 Docker 动态链整体写入静态固化文件；只固化宿主机基线策略，并让 Docker 在 daemon 启动时重建自己的链。
+- Docker 发布到 `0.0.0.0` 的端口经过 DNAT 后不一定进入宿主机 `INPUT` 链；不能只靠 `INPUT` 规则限制这类端口。内部服务优先绑定 `127.0.0.1`，需要公网限制时使用云安全组或统一的 `DOCKER-USER` 入口规则。
+- Docker Engine 低于 28.0.0 时，localhost 发布端口和未发布容器端口存在旧版 direct-routing 安全差异；升级并验证 Docker 版本之前，不要把全局 `FORWARD` 改成 `ACCEPT`。
+- `iptables -P FORWARD ACCEPT` 不能覆盖链中已有的 `DROP`，也不能阻止旧 systemd oneshot 重加规则。切换基线前必须审计 `FORWARD`、`DOCKER-USER` 和相关 systemd 单元，精确清理旧出口限制；不要 flush Docker 自动维护的链。

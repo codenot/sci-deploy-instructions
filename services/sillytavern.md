@@ -261,12 +261,15 @@ docker network inspect <SILLYTAVERN_NETWORK>
 iptables-save > /root/iptables-before-docker-egress-$(date +%Y%m%d-%H%M%S).rules
 ```
 
-临时放通某个 Docker bridge 示例：
+不要为 SillyTavern 单独添加 Docker bridge 出口规则，也不要创建服务专属的 systemd oneshot。按部署总手册的 [Docker 转发基线](../deployment.md#docker-转发基线) 统一处理。只有确认 Docker Engine `>= 28.0.0` 后才能采用这套基线。
+
+运行时发现 `FORWARD DROP` 时，先校验配置并审计现有规则和服务：
 
 ```bash
-BRIDGE=br-xxxxxxxxxxxx
-iptables -I FORWARD 1 -o "$BRIDGE" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-iptables -I FORWARD 2 -i "$BRIDGE" ! -o "$BRIDGE" -j ACCEPT
+dockerd --validate --config-file=/etc/docker/daemon.json
+iptables -S FORWARD
+iptables -S DOCKER-USER
+systemctl list-unit-files --type=service | grep -Ei 'docker|forward|firewall|iptables|netfilter'
 ```
 
-注意：这只是运行时规则。服务器重启后要重新确认，或用 systemd oneshot / netfilter-persistent 做持久化。
+停用并归档确认属于旧 Docker 出口限制的单元，精确删除旧出口 `DROP`，再执行 `iptables -P FORWARD ACCEPT`。不要 flush `FORWARD` 或 Docker 自动维护的链。`iptables -P` 只修改当前运行态；还应配置 `ip-forward-no-drop: true`，并确认宿主机固化策略也是 `FORWARD ACCEPT`。Docker 自动维护的 NAT 和端口映射必须保留，不能设置 `"iptables": false`。

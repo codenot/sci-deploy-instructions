@@ -96,7 +96,7 @@ api.example.com       -> 其他 API 服务，可选
 
 Remnawave Panel 本身不跑 Xray-core；节点代理流量需要单独部署 Remnawave Node，并在面板里通过 Config Profile、Host、Internal Squad 关联。
 
-Remnawave Node 的 `NODE_PORT` 是 Panel 调用 Node 的控制 API，不是给用户连接的代理端口。这个端口不要直接开放公网；同机 Docker 部署时可以只允许 Remnawave Panel 所在 Docker 网段访问，用户代理端口则按 Config Profile 的入站单独开放。
+Remnawave Node 的 `NODE_PORT` 是 Panel 调用 Node 的控制 API，不是给用户连接的代理端口。这个端口不要直接开放公网；这是 Node 的入口限制，不是 Panel 容器的出口限制。Node 使用 host 网络时在 `INPUT` 控制来源，Node 通过 Docker 发布端口时在 `DOCKER-USER` 或云安全组控制来源；用户代理端口按 Config Profile 的入站单独开放。
 
 ## 5. 安装 Docker
 
@@ -123,7 +123,82 @@ docker version
 docker compose version
 ```
 
+### Docker 转发基线
+
+本仓库管理的服务器默认不对 Docker bridge 出口设置服务级、网段级或目的地址级白名单。Docker 继续自动维护 bridge、NAT、端口映射和网络隔离，宿主机 IPv4 `FORWARD` 基线使用 `ACCEPT`，入口访问控制放在云安全组、服务监听地址或统一的入口防火墙。
+
+这套基线的硬前置条件是 Docker Engine `>= 28.0.0`。Docker 28 加强了 localhost 发布端口和未发布容器端口的 direct-routing 防护；旧版本先升级并完成回归验证，不要直接把全局 `FORWARD` 改成 `ACCEPT`。版本差异见 [Docker 端口发布文档](https://docs.docker.com/engine/network/port-publishing/) 和 [Docker Engine 28 release notes](https://docs.docker.com/engine/release-notes/28/)。
+
+不要把 Docker 的 `iptables` 功能设置为 `false`。这会关闭 Docker 自动生成的网络规则，导致默认 bridge 的 NAT、端口映射或网络隔离失效。
+
+Docker 28 及以上在 `/etc/docker/daemon.json` 使用：
+
+```json
+{
+  "ip-forward-no-drop": true
+}
+```
+
+如果 `daemon.json` 已存在，必须把字段合并进现有 JSON，不要覆盖原有配置。修改前备份当前规则和配置：
+
+```bash
+BACKUP_DIR="/root/firewall-backup/$(date +%Y%m%d-%H%M%S)"
+install -d -m 0700 "$BACKUP_DIR"
+iptables-save > "$BACKUP_DIR/iptables-before-docker-forward.rules"
+cp -a /etc/docker/daemon.json "$BACKUP_DIR/daemon.json.before" 2>/dev/null || true
+systemctl list-unit-files --type=service > "$BACKUP_DIR/systemd-units.before"
+```
+
+先校验 Docker 配置和现有规则，不要一上来只改 policy：
+
+```bash
+docker version --format '{{.Server.Version}}'
+dockerd --validate --config-file=/etc/docker/daemon.json
+iptables -S FORWARD
+iptables -S DOCKER-USER
+systemctl list-unit-files --type=service | grep -Ei 'docker|forward|firewall|iptables|netfilter'
+```
+
+先停用并归档确认属于旧 Docker 出口白名单的 systemd 单元，再精确删除 `FORWARD` 或 `DOCKER-USER` 中的旧出口 `DROP`。不要使用 `iptables -F`，不要清空或手工改写 Docker 自动维护的 `DOCKER*` 链。完成审计和清理后再执行：
+
+```bash
+iptables -P FORWARD ACCEPT
+```
+
+`iptables -P FORWARD ACCEPT` 立即修改运行时 policy，但不能覆盖链里更早匹配的 `DROP`；`ip-forward-no-drop` 在 Docker daemon 下次启动时阻止 Docker 再把 policy 改为 `DROP`。生产服务器写入配置后可以先保持现有 daemon 运行，在计划维护窗口再重启 Docker；重启前先记录所有容器的 restart policy，避免 `restart: no` 的容器停机后未自动恢复。
+
+Debian/Ubuntu 如果启用了 `netfilter-persistent`，确认 `/etc/iptables/rules.v4` 中的基线为：
+
+```text
+:FORWARD ACCEPT [0:0]
+```
+
+不要在 Docker 运行期间直接把包含 `DOCKER`、`DOCKER-FORWARD`、`DOCKER-CT` 等动态链的完整规则集固化到 `rules.v4`。静态配置只保存宿主机基线，让 Docker 在 daemon 启动时重建自己的链。确认 `netfilter-persistent.service` 在 `docker.service` 之前加载；Docker 运行期间禁止执行 `netfilter-persistent reload` 或手工 `iptables-restore`，否则可能清掉 Docker 的动态 filter/NAT 链。确需 reload 时必须安排维护窗口，reload 后受控重启 Docker，并完整验证容器、端口映射和出网。
+
+```bash
+systemctl show netfilter-persistent.service docker.service -p Id -p Before -p After
+```
+
+不要为单个 `br-*`、Docker 子网、容器服务或远端目的地址创建出口放行规则，也不要为此创建 systemd oneshot。如果容器出网失败而宿主机正常，先检查并恢复全局基线：
+
+```bash
+docker version --format '{{.Server.Version}}'
+dockerd --help | grep ip-forward-no-drop
+sysctl net.ipv4.ip_forward
+iptables -S FORWARD
+iptables -S DOCKER-USER
+grep '^:FORWARD ' /etc/iptables/rules.v4 2>/dev/null
+dockerd --validate --config-file=/etc/docker/daemon.json
+docker exec <CONTAINER> curl -I --max-time 10 https://example.com/
+```
+
+如果启用了 Docker IPv6，还必须单独检查 IPv6 转发、`ip6tables` 和外层 IPv6 防火墙；不能因为 IPv4 已放通就默认 IPv6 策略正确。
+
 ## 6. 防火墙
+
+防火墙策略统一放在最外层：云服务器优先使用云安全组控制公网端口；宿主机或 `network_mode: host` 服务使用 `INPUT`；Docker 发布端口需要依赖云安全组、监听地址，或在确有需要时使用一套统一的 `DOCKER-USER` 入口规则。
+
+Docker 发布到 `0.0.0.0` 的端口经过 DNAT 后不一定进入宿主机 `INPUT` 链，因此不能只配置 `INPUT` 就认为容器端口已受保护。面板、数据库、metrics 和内部 API 优先绑定 `127.0.0.1`，由 Caddy 反代；不要用容器出口限制弥补错误的公网端口映射。
 
 至少放行：
 
@@ -148,35 +223,9 @@ Tailscale DERP 上游端口 33443
 
 这些服务推荐只监听 `127.0.0.1`，由 Caddy 反代对外提供 HTTPS。
 
-## 7. 全链路验证
+## 通用排查
 
-部署完成后建议跑：
-
-```bash
-docker ps
-ss -lntup | grep -E ':80|:443|:2095|:2096|:3001|:3002|:7123|:8000|:3010|:3011|:33443|:3478'
-
-curl -ksS -o /dev/null -w 'silly %{http_code} %{time_total}\n' https://silly.example.com/
-curl -ksS -o /dev/null -w 'marzban %{http_code} %{time_total}\n' https://marzban.example.com/<RANDOM_DASHBOARD_PATH>/
-curl -ksS -o /dev/null -w 'remnawave %{http_code} %{time_total}\n' https://remnawave.example.com/
-curl -ksS -o /dev/null -w 'sub %{http_code} %{time_total}\n' https://sub.example.com/
-curl -ksS -o /dev/null -w 'mihomo %{http_code} %{content_type} %{time_total}\n' https://sub.example.com/mihomo
-curl -ksS -o /dev/null -w 'derp %{http_code} %{time_total}\n' https://<DERP_DOMAIN>/derp/probe
-
-systemctl status s-ui --no-pager -l
-docker logs --tail 100 caddy
-docker logs --tail 100 marzban
-docker logs --tail 100 remnawave
-docker logs --tail 100 sub-store
-docker logs --tail 100 sillytavern
-systemctl status tailscale-derp --no-pager -l
-```
-
-如果验证失败，不要同时改多个组件。先按下一节通用排查定位层级，再进入对应服务文档处理。
-
-## 8. 通用排查
-
-先判断问题在哪一层：
+先判断问题在哪一层
 
 ```text
 DNS / 安全组 / 防火墙
@@ -187,51 +236,7 @@ DNS / 安全组 / 防火墙
   -> 客户端配置
 ```
 
-每次修改前先备份，每次修改后只验证一个假设。不要同时改 Caddy、容器、面板和客户端，否则很难知道是哪一步修好的。
-
-### 基础状态采集
-
-先跑这一组，保存输出里的异常：
-
-```bash
-date -u
-hostname -I
-docker ps
-ss -lntup | grep -E ':80|:443|:2095|:2096|:3001|:3002|:7123|:32676|:8000|:3010|:3011|:33443|:3478'
-
-systemctl status s-ui --no-pager -l
-docker logs --tail 100 caddy
-docker logs --tail 100 marzban
-docker logs --tail 100 remnawave
-docker logs --tail 100 sub-store
-docker logs --tail 100 sillytavern
-systemctl status tailscale-derp --no-pager -l
-```
-
-公网入口验证：
-
-```bash
-curl -vk https://silly.example.com/
-curl -vk https://marzban.example.com/<RANDOM_DASHBOARD_PATH>/
-curl -vk https://remnawave.example.com/
-curl -vk https://sub.example.com/
-curl -vk https://sub.example.com/mihomo
-curl -vk https://<DERP_DOMAIN>/derp/probe
-```
-
-本机上游验证：
-
-```bash
-curl -sS -o /dev/null -w 'marzban %{http_code} %{content_type}\n' http://127.0.0.1:8000/<RANDOM_DASHBOARD_PATH>/
-curl -sS -D- http://127.0.0.1:3011/health
-curl -sS -o /dev/null -w 'sub frontend %{http_code} %{content_type}\n' http://127.0.0.1:3001/
-curl -sS -o /dev/null -w 'sub backend %{http_code} %{content_type}\n' http://127.0.0.1:3002/
-curl -sS -o /dev/null -w 'silly %{http_code}\n' http://127.0.0.1:7123/
-curl -sS -o /dev/null -w 's-ui sub %{http_code}\n' http://127.0.0.1:2096/sub/<SUB_PATH>
-curl --cacert /opt/tailscale-derp/certs/<DERP_DOMAIN>.crt \
-  --resolve <DERP_DOMAIN>:33443:127.0.0.1 \
-  -sS -D- -o /dev/null https://<DERP_DOMAIN>:33443/derp/probe
-```
+不要同时改 Caddy、容器、面板和客户端，否则很难知道是哪一步修好的。
 
 ### 服务排查入口
 
