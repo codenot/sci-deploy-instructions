@@ -1,7 +1,7 @@
 # 服务器部署清单
 
-> 更新时间：2026-07-18T11:45:12Z
-> 来源：对 `kr`、`tw`、`hk`、`hk2`、`vn` 五个 SSH alias 做状态采集，并补充 `gz` 的 Tailscale DERP 部署结果、`hk2` 的 Headscale/Tailscale 部署结果、`kr`/`gz` 切换到自建 Headscale 的结果、`hk2` Headscale 发布 `gz` 自建 DERP 的结果，以及 `kr` 的 Miaomiaowu、grok2api 和 Docker 转发策略调整结果；记录包括 `hostname`、`/etc/os-release`、`docker ps`、`ss -lntup`、`systemctl is-active`、`/opt` 目录和 compose 文件路径。
+> 更新时间：2026-07-20T03:05:00Z
+> 来源：对 `kr`、`tw`、`hk`、`hk2`、`vn`、`us` 六个 SSH alias 做状态采集，并补充 `gz` 的 Tailscale DERP 部署结果、`hk2` 的 Headscale/Tailscale 部署结果、`kr`/`gz` 切换到自建 Headscale 的结果、`hk2` Headscale 发布 `gz` 自建 DERP 的结果，以及 `kr` 的 Miaomiaowu、grok2api 和 Docker 转发策略调整结果；记录包括 `hostname`、`/etc/os-release`、`docker ps`、`ss -lntup`、`systemctl is-active`、`/opt` 目录和 compose 文件路径。
 > 记录原则：本文只记录服务器 alias、服务、目录、容器名和端口用途；不要记录真实 IP、真实域名、token、密码、API key、订阅地址或 Remnawave Node `SECRET_KEY`。
 
 ## 总览
@@ -13,6 +13,7 @@
 | `hk` | `serqdqtb8vzj60u` | Ubuntu 20.04 | 香港节点 | Remnawave Node、Komari Agent |
 | `hk2` | `hongkong-annual` | Ubuntu 24.04 | 香港节点/Headscale 控制面 | Remnawave Node、Headscale、Caddy、Tailscale |
 | `vn` | `C20260320147399` | Ubuntu 24.04 | 越南节点 | Remnawave Node、nginx |
+| `us` | `racknerd-48395a9` | Ubuntu 24.04 | 美国节点 | Remnawave Node、Komari Agent |
 | `gz` | `guangzhou` | Ubuntu 24.04 | 广州辅助服务/Tailscale relay | Caddy、Tailscale、Tailscale DERP、RustDesk、Komari Agent |
 
 ## `kr`
@@ -61,7 +62,7 @@
 - grok2api 的 compose、配置、SQLite 数据和备份均在 `/opt/grok2api`；宿主机 `8005/tcp` 只监听 `127.0.0.1`，由 Caddy 反代，不要直接暴露公网。
 - grok2api 首次启动时 `bootstrapAdmin.password` 至少需要 8 个字符；管理员创建成功后应从配置删除整个 `bootstrapAdmin` 段。`/healthz` 用于进程健康检查；尚未添加可用上游账号时 `/readyz` 返回 `503` 属于预期状态。
 - grok2api 直连 Grok Console 时可能被上游 Cloudflare WAF 按数据中心出口拦截；此时应在管理端“运行设置 -> 出口代理”配置同一浏览器会话对应的代理、User-Agent 和 Cloudflare Cookie，不要继续修改 Caddy 或 Docker FORWARD。
-- Komari Server 使用全新 SQLite 数据库，管理凭据和自动发现密钥只保存在 `/opt/komari` 且权限为 `0600`；已为全部现有及未来节点启用北京、上海、广州三地电信/联通/移动共 9 个 ICMP 延迟任务，周期为 60 秒。
+- Komari Server 使用全新 SQLite 数据库，管理凭据和自动发现密钥只保存在 `/opt/komari` 且权限为 `0600`；当前启用 `Komari Next 1.4.18` 主题，主题文件位于 `/opt/komari/data/theme/next`，切换前备份位于 `/opt/komari/backup/20260719-171041-before-komari-next`；已为全部现有及未来节点启用北京、上海、广州三地电信/联通/移动共 9 个 ICMP 延迟任务，周期为 60 秒。
 
 ## `tw`
 
@@ -104,6 +105,7 @@
 |---|---|---|---|
 | Remnawave Node | `/opt/remnawave-node` | Docker 容器 `remnawave-node`，`network_mode: host` | `*:2222` 控制 API、`*:25080` 代理入站、`127.0.0.1:61081` 本地占位/内部端口 |
 | Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
+| Ookla Speedtest CLI | `/usr/local/bin/speedtest` | 官方静态 CLI `1.2.0.84` | 按需执行网络测速，不常驻监听端口 |
 
 ### 注意事项
 
@@ -163,6 +165,29 @@
 - s-ui 卸载前的完整安装目录、数据库和 systemd 单元已备份到 `/opt/s-ui-backup/s-ui-uninstall-20260714-124732.tgz`，对应 SHA-256 文件保存在同目录。
 - s-ui 原使用的 `2095/tcp`、`2096/tcp` 和 `18841/tcp` 已停止监听；后续新增代理入站前仍需先查 `ss -lntup`，避免与 nginx `80/tcp` 和 Remnawave Node `25080/tcp` 冲突。
 
+## `us`
+
+### 基础状态
+
+- Docker：`active`，Engine `29.6.2`。
+- Tailscale：未部署。
+- TCP 拥塞控制：`bbr`；默认 qdisc：`fq`。
+- IPv4 `OUTPUT` 和 `FORWARD` 均为 `ACCEPT`；Docker 使用 `ip-forward-no-drop: true`，不设置服务级或目的地址级出口限制。
+
+### 已部署服务
+
+| 服务 | 部署目录 | 运行形态 | 监听/暴露 |
+|---|---|---|---|
+| Remnawave Node | `/opt/remnawave-node` | Docker 容器 `remnawave-node`，`network_mode: host` | `*:2222` 控制 API、`*:25080` 代理入站、`127.0.0.1:61081` 本地占位/内部端口 |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
+
+### 注意事项
+
+- Remnawave Panel 中节点名称为 `us-node`，关联 `Default-Profile` 的 `Shadowsocks` 和 `VLESS-Reality-25080` 入站；订阅 Host 为 `美国 - RackNerd`，绑定 `VLESS-Reality-25080`；Komari 中节点名称为 `us`。
+- `2222/tcp` 由 `remnawave-node-firewall.service` 在宿主机 `INPUT` 限制为只允许 `kr` Panel 固定出口访问；IPv6 对该端口直接拒绝。云安全组也应保持相同入口策略。
+- `25080/tcp` 是正式 VLESS/Reality 代理入站，需要在云安全组中开放；`61081` 仅监听 `127.0.0.1`。
+- 防火墙只管理入口；不要给 `us` 添加 `OUTPUT`、容器网段、Docker 网桥或远端目的地址出口白名单。
+
 ## `gz`
 
 ### 基础状态
@@ -196,6 +221,7 @@
 
 ## 通用运维规则
 
+- `kr`、`tw`、`hk`、`hk2`、`vn`、`us`、`gz` 已启用 TCP BBR，运行基线为 `net.ipv4.tcp_congestion_control=bbr` 和 `net.core.default_qdisc=fq`；除已有配置的 `kr` 外，其余节点使用 `/etc/sysctl.d/99-bbr.conf` 和 `/etc/modules-load.d/bbr.conf` 持久化。
 - 修改任何线上配置前，先按服务文档备份对应目录、数据库或防火墙规则。
 - Remnawave Node 的 `NODE_PORT` 默认是 `2222`，它是 Panel 控制 Node 的 API 端口，不是用户代理端口；不要把它当作订阅里的节点端口。
 - 新增 Remnawave Node 或调整入站时，先看 [services/remnawave.md](./services/remnawave.md) 的「部署 Remnawave Node」章节。
@@ -206,7 +232,7 @@
 ## 只读刷新命令
 
 ```bash
-for host in kr tw hk hk2 vn gz; do
+for host in kr tw hk hk2 vn us gz; do
   printf "\n### %s\n" "$host"
   ssh "$host" '
     hostname
