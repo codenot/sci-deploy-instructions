@@ -7,7 +7,7 @@ Docker 服务默认部署在 `/opt/<service>`，宿主机挂载目录使用 `/op
 主文档：
 
 - [deployment.md](./deployment.md)：基础 Docker、目录/域名/端口约定、全链路验证、通用排查、备份习惯。
-- [servers.md](./servers.md)：`kr`、`tw`、`hk`、`hk2` 当前部署服务、目录、容器和端口清单。
+- [servers.md](./servers.md)：当前服务器的部署服务、目录、容器和端口清单。
 - [asn-route.md](./asn-route.md)：电信、联通、移动常见 ASN、线路俗称、用途和价格水位速查。
 
 单服务部署：
