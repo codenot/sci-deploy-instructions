@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 VPS 购买者的中国大陆线路科普：看懂普通国际线路、绕路、三网优化、CN2、9929、CMI 与 CMIN2。">
+  <title>VPS 线路选择指南：看懂三网优化、绕路与精品网</title>
+  <style>
+    :root {
+      --ink: #17211f;
+      --muted: #5e6966;
+      --paper: #f7f8f5;
+      --surface: #ffffff;
+      --line: #d8ded9;
+      --teal: #087b70;
+      --teal-dark: #075c56;
+      --amber: #d47b16;
+      --amber-soft: #fff4df;
+      --red: #b44236;
+      --red-soft: #fff0ed;
+      --blue: #296aa3;
+      --charcoal: #101716;
+      --hero-ink: #f8fbf9;
+      --content: 1160px;
+      --article: 760px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 17px;
+      line-height: 1.75;
+      letter-spacing: 0;
+    }
+    a { color: var(--teal-dark); text-underline-offset: 3px; }
+    a:hover { color: var(--amber); }
+    img { display: block; max-width: 100%; }
+    code {
+      padding: .08em .38em;
+      border: 1px solid #dce2dd;
+      border-radius: 4px;
+      background: #eef2ef;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .9em;
+    }
+    strong { color: #0c1715; }
+    [id] { scroll-margin-top: 84px; }
+
+    .progress {
+      position: fixed;
+      z-index: 50;
+      inset: 0 auto auto 0;
+      width: 0;
+      height: 3px;
+      background: var(--amber);
+    }
+    .hero {
+      position: relative;
+      min-height: min(78vh, 720px);
+      display: grid;
+      align-items: end;
+      color: var(--hero-ink);
+      background: var(--charcoal) url("assets/vps-route-hero.jpg") center / cover no-repeat;
+      isolation: isolate;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      background: rgba(5, 12, 11, .34);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      inset: 0 42% 0 0;
+      background: rgba(5, 12, 11, .72);
+    }
+    .hero-inner {
+      width: min(var(--content), calc(100% - 40px));
+      margin: 0 auto;
+      padding: 72px 0 64px;
+    }
+    .kicker {
+      margin: 0 0 14px;
+      color: #76d9cd;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 720px;
+      margin: 0;
+      font-size: clamp(2.4rem, 6vw, 5.6rem);
+      line-height: 1.03;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    .dek {
+      max-width: 650px;
+      margin: 24px 0 0;
+      color: #e3ebe7;
+      font-size: clamp(1rem, 2vw, 1.28rem);
+      line-height: 1.65;
+    }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 24px;
+      margin-top: 28px;
+      color: #becbc6;
+      font-size: .82rem;
+    }
+
+    .summary-band {
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .summary-grid {
+      width: min(var(--content), calc(100% - 40px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .summary-item {
+      min-width: 0;
+      padding: 26px 28px;
+      border-right: 1px solid var(--line);
+    }
+    .summary-item:first-child { padding-left: 0; }
+    .summary-item:last-child { border-right: 0; }
+    .summary-item b {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--teal-dark);
+      font-size: .94rem;
+    }
+    .summary-item span {
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.5;
+    }
+
+    .page {
+      width: min(var(--content), calc(100% - 40px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 210px minmax(0, var(--article));
+      justify-content: space-between;
+      gap: 72px;
+      padding: 70px 0 100px;
+    }
+    .toc {
+      position: sticky;
+      top: 36px;
+      align-self: start;
+      font-size: .82rem;
+    }
+    .toc strong {
+      display: block;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: .72rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .toc a {
+      display: block;
+      padding: 7px 0 7px 13px;
+      border-left: 2px solid var(--line);
+      color: var(--muted);
+      text-decoration: none;
+      line-height: 1.35;
+    }
+    .toc a:hover,
+    .toc a.active {
+      border-left-color: var(--amber);
+      color: var(--ink);
+    }
+    article { min-width: 0; }
+    article > section {
+      padding: 8px 0 72px;
+      border-bottom: 1px solid var(--line);
+    }
+    article > section + section { padding-top: 68px; }
+    article > section:last-child { border-bottom: 0; }
+    h2 {
+      margin: 0 0 22px;
+      font-size: clamp(1.8rem, 4vw, 2.7rem);
+      line-height: 1.18;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    h3 {
+      margin: 40px 0 14px;
+      font-size: 1.28rem;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+    p { margin: 0 0 18px; }
+    .lead {
+      font-size: 1.16rem;
+      color: #33413d;
+    }
+    .section-no {
+      display: block;
+      margin-bottom: 10px;
+      color: var(--amber);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .callout {
+      margin: 28px 0;
+      padding: 20px 22px;
+      border-left: 4px solid var(--teal);
+      background: #edf6f3;
+    }
+    .callout.warning {
+      border-left-color: var(--amber);
+      background: var(--amber-soft);
+    }
+    .callout.danger {
+      border-left-color: var(--red);
+      background: var(--red-soft);
+    }
+    .callout p:last-child { margin-bottom: 0; }
+
+    .route-figure {
+      margin: 34px 0;
+      padding: 28px;
+      border: 1px solid #263431;
+      border-radius: 8px;
+      color: #e9f0ed;
+      background: #111a18;
+    }
+    .route-figure figcaption {
+      margin-bottom: 24px;
+      color: #c5d2cd;
+      font-size: .82rem;
+    }
+    .route-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr) 95px;
+      align-items: center;
+      gap: 14px;
+      min-height: 72px;
+    }
+    .route-row + .route-row { border-top: 1px solid #2b3a37; }
+    .route-label {
+      font-size: .8rem;
+      font-weight: 800;
+    }
+    .route-track {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+    .route-track::before,
+    .route-track::after {
+      content: "";
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: #f5faf8;
+    }
+    .route-line {
+      position: relative;
+      height: 4px;
+      flex: 1;
+      background: var(--teal);
+    }
+    .route-line.detour {
+      height: 28px;
+      border: 4px solid var(--red);
+      border-bottom: 0;
+      border-radius: 24px 24px 0 0;
+      background: transparent;
+    }
+    .route-line.premium {
+      height: 8px;
+      background: var(--amber);
+      box-shadow: 0 0 0 3px rgba(212, 123, 22, .18);
+    }
+    .route-note {
+      color: #aebcb7;
+      font-size: .74rem;
+      line-height: 1.35;
+      text-align: right;
+    }
+
+    .path-chain {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 18px;
+      margin: 30px 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: path;
+    }
+    .path-chain li {
+      position: relative;
+      min-width: 0;
+      padding: 18px 12px;
+      border-top: 3px solid var(--teal);
+      background: var(--surface);
+      box-shadow: inset 0 0 0 1px var(--line);
+      font-size: .78rem;
+      line-height: 1.45;
+      text-align: center;
+    }
+    .path-chain li::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -16px;
+      color: var(--amber);
+      font-weight: 800;
+      transform: translateY(-50%);
+    }
+    .path-chain li:last-child::after { display: none; }
+    .path-chain b { display: block; margin-bottom: 4px; }
+
+    .network-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 28px 0;
+    }
+    .network-card {
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--teal);
+      border-radius: 6px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .network-card:nth-child(2) { border-top-color: var(--amber); }
+    .network-card:nth-child(3) { border-top-color: var(--blue); }
+    .network-card header { padding: 20px 18px 12px; }
+    .network-card h3 { margin: 0; font-size: 1.12rem; }
+    .network-card .asn-list {
+      margin: 0;
+      padding: 0 18px 18px;
+      list-style: none;
+    }
+    .asn-list li {
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.45;
+    }
+    .asn-list b { display: block; font-size: .9rem; }
+
+    .myth-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 28px 0;
+    }
+    .myth {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+    }
+    .myth .term {
+      display: block;
+      color: var(--red);
+      font-size: .76rem;
+      font-weight: 800;
+    }
+    .myth b { display: block; margin: 4px 0 8px; }
+    .myth p { margin: 0; color: var(--muted); font-size: .82rem; }
+
+    .table-wrap {
+      margin: 28px 0;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+      font-size: .8rem;
+      line-height: 1.55;
+    }
+    th, td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: #eff7f4;
+      background: #18312d;
+      font-size: .72rem;
+      white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #f0f5f2; }
+    .good { color: var(--teal-dark); font-weight: 800; }
+    .mixed { color: #9b5a0c; font-weight: 800; }
+    .risk { color: var(--red); font-weight: 800; }
+
+    .steps {
+      margin: 30px 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: steps;
+    }
+    .steps li {
+      position: relative;
+      padding: 0 0 26px 56px;
+      counter-increment: steps;
+    }
+    .steps li::before {
+      content: counter(steps);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--teal);
+      border-radius: 50%;
+      color: var(--teal-dark);
+      background: var(--surface);
+      font-size: .78rem;
+      font-weight: 800;
+    }
+    .steps li::after {
+      content: "";
+      position: absolute;
+      top: 42px;
+      bottom: 6px;
+      left: 18px;
+      border-left: 1px solid var(--line);
+    }
+    .steps li:last-child::after { display: none; }
+    .steps b { display: block; margin-bottom: 4px; }
+    .steps p { margin: 0; color: var(--muted); font-size: .9rem; }
+
+    .decision {
+      margin: 30px 0;
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .decision-row {
+      display: grid;
+      grid-template-columns: 1.1fr 1.4fr;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .decision-row:last-child { border-bottom: 0; }
+    .decision-row b { font-size: .88rem; }
+    .decision-row span { color: var(--muted); font-size: .82rem; }
+
+    .source-list {
+      padding-left: 1.2em;
+      color: var(--muted);
+      font-size: .84rem;
+    }
+    .source-list li { margin-bottom: 8px; }
+    .fine-print { color: var(--muted); font-size: .78rem; }
+    footer {
+      border-top: 1px solid #2a3835;
+      color: #aebbb7;
+      background: var(--charcoal);
+    }
+    .footer-inner {
+      width: min(var(--content), calc(100% - 40px));
+      margin: 0 auto;
+      padding: 36px 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      font-size: .76rem;
+    }
+
+    @media (max-width: 900px) {
+      .hero { min-height: 680px; background-position: 58% center; }
+      .hero::after { inset: 0 18% 0 0; }
+      .page { grid-template-columns: 1fr; padding-top: 52px; }
+      .toc { display: none; }
+      .network-grid { grid-template-columns: 1fr; }
+      .path-chain { grid-template-columns: 1fr; gap: 10px; }
+      .path-chain li { text-align: left; }
+      .path-chain li::after {
+        content: "↓";
+        top: auto;
+        right: 18px;
+        bottom: -14px;
+        transform: none;
+      }
+    }
+    @media (max-width: 640px) {
+      body { font-size: 16px; }
+      .hero { min-height: 620px; align-items: end; background-position: 63% center; }
+      .hero::before { background: rgba(5, 12, 11, .5); }
+      .hero::after { inset: 0; background: rgba(5, 12, 11, .38); }
+      .hero-inner { width: min(100% - 32px, var(--content)); padding-bottom: 42px; }
+      h1 { max-width: 10ch; font-size: 3rem; }
+      .dek { max-width: 30ch; }
+      .summary-grid { width: 100%; grid-template-columns: 1fr; }
+      .summary-item,
+      .summary-item:first-child {
+        padding: 18px 20px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .summary-item:last-child { border-bottom: 0; }
+      .page { width: min(100% - 32px, var(--content)); gap: 0; padding-bottom: 70px; }
+      article > section { padding-bottom: 56px; }
+      article > section + section { padding-top: 52px; }
+      .route-figure { padding: 18px 14px; margin-inline: -4px; }
+      .route-row { grid-template-columns: 70px minmax(0, 1fr); gap: 10px; }
+      .route-note { grid-column: 2; padding-bottom: 10px; text-align: left; }
+      .myth-grid { grid-template-columns: 1fr; }
+      .decision { padding: 18px; }
+      .decision-row { grid-template-columns: 1fr; gap: 3px; }
+      .footer-inner { display: block; }
+    }
+    @media print {
+      .progress, .toc { display: none; }
+      .hero { min-height: 460px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { display: block; width: 90%; padding-top: 40px; }
+      article > section { break-inside: avoid; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"></div>
+
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="kicker">VPS NETWORK FIELD GUIDE</p>
+      <h1>VPS 线路选择指南</h1>
+      <p class="dek">看懂“三网优化”、普通线路绕路与精品网的真正作用。买 VPS 时，你买的不只是机房位置，更是去程和回程各自选择的一整条网络路径。</p>
+      <div class="hero-meta">
+        <span>面向中国大陆访问场景</span>
+        <span>约 12 分钟阅读</span>
+        <span>资料基线：2026-07-29</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="summary-band" aria-label="文章要点">
+    <div class="summary-grid">
+      <div class="summary-item"><b>距离不是路线</b><span>香港、日本离大陆近，数据仍可能绕到新加坡甚至美国。</span></div>
+      <div class="summary-item"><b>ASN 不是质量证书</b><span>看到 CN2、CMI 或 CUG，只能证明路径经过它，不能单独证明产品等级。</span></div>
+      <div class="summary-item"><b>三网必须分别测</b><span>电信、联通、移动是三套独立选路体系，去程和回程也可能完全不同。</span></div>
+    </div>
+  </section>
+
+  <main class="page">
+    <nav class="toc" aria-label="文章目录">
+      <strong>目录</strong>
+      <a href="#route">你购买的是一条路径</a>
+      <a href="#detour">普通线路为何绕路</a>
+      <a href="#premium">精品网解决什么</a>
+      <a href="#three-carriers">三网关系与常见线路</a>
+      <a href="#marketing">翻译厂商宣传词</a>
+      <a href="#regions">地区怎么选</a>
+      <a href="#checklist">购买前怎么验证</a>
+      <a href="#conclusion">最后的选择结论</a>
+      <a href="#sources">事实边界与来源</a>
+    </nav>
+
+    <article>
+      <section id="route">
+        <span class="section-no">01 / THE ROUTE</span>
+        <h2>你购买的不是一个地点，而是一条路径</h2>
+        <p class="lead">“东京 VPS”只说明服务器大致放在东京，不能说明中国电信、联通和移动会怎样到达它。</p>
+        <p>一次访问要先从家庭宽带进入接入网、城域网和国内骨干，再经获批的国际通信业务出入口交给国际传输网，越过海缆或陆缆，到达境外运营商和 VPS 所在网络。回程则由 VPS 一侧重新选路。</p>
+
+        <ol class="path-chain" aria-label="国际互联网访问逻辑路径">
+          <li><b>你的宽带</b>电信 / 联通 / 移动</li>
+          <li><b>国内骨干</b>省网与全国骨干</li>
+          <li><b>国际出入口</b>业务出口与传输网</li>
+          <li><b>海外网络</b>Transit / Peer / IX</li>
+          <li><b>VPS 网络</b>机房与 Origin AS</li>
+        </ol>
+
+        <p>路径中每一段都可能由不同公司提供。BGP 负责在自治系统之间传播路由，但它优先表达商业关系和运营策略，并不会自动寻找地图上最短、延迟最低的路线。</p>
+        <div class="callout">
+          <p><strong>先记住两个方向：</strong>从你家到 VPS 叫去程，从 VPS 返回你家叫回程。两者由两侧网络分别决策，出现“去程直连、回程绕路”完全正常。</p>
+        </div>
+      </section>
+
+      <section id="detour">
+        <span class="section-no">02 / DETOURS</span>
+        <h2>普通国际线路为什么会绕路？</h2>
+        <p class="lead">互联网中的“普通线路”通常是价格优先的 Transit 组合。它能保证全球可达，却不承诺中国方向最短，也不承诺晚高峰有足够余量。</p>
+
+        <figure class="route-figure">
+          <figcaption>三种常见路径形态。示意图不对应某个固定运营商或真实海缆。</figcaption>
+          <div class="route-row">
+            <span class="route-label">近端直连</span>
+            <span class="route-track"><span class="route-line"></span></span>
+            <span class="route-note">距离短，仍需看容量</span>
+          </div>
+          <div class="route-row">
+            <span class="route-label">普通绕路</span>
+            <span class="route-track"><span class="route-line detour"></span></span>
+            <span class="route-note">成本或互联策略优先</span>
+          </div>
+          <div class="route-row">
+            <span class="route-label">精品承载</span>
+            <span class="route-track"><span class="route-line premium"></span></span>
+            <span class="route-note">更可控的入口与容量</span>
+          </div>
+        </figure>
+
+        <h3>绕路通常不是“故障”，而是选路结果</h3>
+        <p>VPS 厂商会从若干上游购买网络。如果其中一个上游价格更低、路由优先级更高，或与中国运营商在本地没有合适互联，数据就可能先被送到另一个区域交接。香港服务器绕日本、新加坡，甚至绕美国再回中国，技术上都可能发生。</p>
+        <p>此外，物理上存在直达海缆，不等于公共互联网一定使用它。运营商还会根据合同、容量、故障保护、流量工程和出口负载调度。同一条 AS Path 不变时，底层承载的海缆也可能已经切换。</p>
+
+        <div class="myth-grid">
+          <div class="myth"><span class="term">原因一</span><b>上游便宜但中国互联弱</b><p>全球 Transit 足以“能访问”，却可能在远处才与中国运营商交接。</p></div>
+          <div class="myth"><span class="term">原因二</span><b>近端 Peer 容量不足</b><p>路由看似短，晚高峰却因互联口或下游超售而拥塞。</p></div>
+          <div class="myth"><span class="term">原因三</span><b>去回程策略不同</b><p>厂商展示的单向 traceroute 不能代表另一方向。</p></div>
+          <div class="myth"><span class="term">原因四</span><b>目的前缀不同</b><p>同一运营商、同一城市，不同 IP 段也可能选择不同入口。</p></div>
+        </div>
+      </section>
+
+      <section id="premium">
+        <span class="section-no">03 / PREMIUM NETWORKS</span>
+        <h2>精品网真正解决的，是“可控性”</h2>
+        <p class="lead">精品网不是让数据违反物理规律变快，而是用更贵的网络产品，换取更直接的中国入口、较充足的互联容量、明确的流量工程，有时还包括合同 SLA。</p>
+        <p>这类线路的价值在晚高峰最明显：普通线路可能因为共享互联拥塞而丢包、抖动、单线程速度下降；精品承载通常会把流量放在负载较低、策略更稳定的网络中。对于远程桌面、SSH、实时语音、游戏中转和稳定下载，这种差异往往比 CPU 型号更有体感。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>比较维度</th><th>普通国际线路</th><th>中国方向精品线路</th></tr></thead>
+            <tbody>
+              <tr><td>核心目标</td><td>以成本可控实现全球可达</td><td>改善特定运营商和地区的路径与稳定性</td></tr>
+              <tr><td>路由</td><td>可能绕行其他国家或洲</td><td>通常选择更直接的境外 PoP 与中国入口</td></tr>
+              <tr><td>高峰体验</td><td>更依赖共享互联容量与厂商超售程度</td><td>一般更稳定，但仍可能因故障或超售退化</td></tr>
+              <tr><td>价格</td><td>低，常见大带宽和大流量</td><td>高，常伴随较小带宽或较贵流量</td></tr>
+              <tr><td>能否只看名称</td><td>不能</td><td>同样不能，必须验证路径、方向和合同等级</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warning">
+          <p><strong>精品网不等于专属海缆。</strong>CN2、联通 9929、CMIN2 等首先是 ASN、承载网络或商业产品语境。它们可以使用运营商自有、联盟持有或租用的海缆容量，和某一条海缆不存在永久一一对应。</p>
+        </div>
+      </section>
+
+      <section id="three-carriers">
+        <span class="section-no">04 / THREE CARRIERS</span>
+        <h2>“三网优化”其实是三个独立问题</h2>
+        <p class="lead">电信、联通、移动拥有各自的公众骨干、精品或承载网络及国际网络。每个 ASN 都是独立自治系统，能够配置自己的 BGP 邻接和策略；同集团关系不代表固定串联。</p>
+
+        <div class="network-grid">
+          <section class="network-card">
+            <header><h3>中国电信</h3></header>
+            <ul class="asn-list">
+              <li><b>电信 163 · <code>AS4134</code></b>公众骨干，普通国际路由常见；高峰口碑取决于互联和容量。</li>
+              <li><b>CN2 · <code>AS4809</code></b>下一代承载网络；经过 CN2 不自动等于 GIA。</li>
+              <li><b>CTGNet · <code>AS23764</code></b>中国电信国际运营的全球网络之一，不是前两者唯一出口。</li>
+            </ul>
+          </section>
+          <section class="network-card">
+            <header><h3>中国联通</h3></header>
+            <ul class="asn-list">
+              <li><b>联通 169 · <code>AS4837</code></b>公众互联网骨干，普通线路中常有不错的性价比。</li>
+              <li><b>联通 9929 · <code>AS9929</code></b>业内也称 A 网或联通精品网，常用于更可控的跨境承载。</li>
+              <li><b>CUG · <code>AS10099</code></b>联通国际网络；出现 CUG 不自动证明大陆段使用 9929。</li>
+            </ul>
+          </section>
+          <section class="network-card">
+            <header><h3>中国移动</h3></header>
+            <ul class="asn-list">
+              <li><b>CMNET · <code>AS9808</code></b>移动大陆公众骨干，自治系统层面独立。</li>
+              <li><b>CMI · <code>AS58453</code></b>移动国际全球 IP 网络，香港等亚太方向十分常见。</li>
+              <li><b>CMIN2 · <code>AS58807</code></b>另一张国际网络，常作为移动方向精品线路；不能与 CMI 混写。</li>
+            </ul>
+          </section>
+        </div>
+
+        <p>移动体系有一点特殊：截至资料查询日期，IPinfo 只把 CMI 和 CMIN2 识别为 CMNET 的完整互联网 Transit 上游。这说明移动当前观测到的国际上游更集中在集团内部，但不代表 CMNET 是“子 ASN”，也不是 BGP 协议永久规定的父子关系。</p>
+        <p>因此，真正的“三网优化”必须回答三个问题：电信回程落在电信 163 还是 CN2？联通回程落在联通 169 还是联通 9929？移动回程使用普通 CMI 还是 CMIN2？如果厂商只展示其中一网，或者只展示去程，就不足以证明三网优化。</p>
+      </section>
+
+      <section id="marketing">
+        <span class="section-no">05 / MARKETING TRANSLATOR</span>
+        <h2>把 VPS 厂商的宣传词翻译成人话</h2>
+
+        <div class="myth-grid">
+          <div class="myth"><span class="term">“国际线路”</span><b>通常只代表全球可达</b><p>它没有承诺中国直连、低拥塞或三网一致。几乎所有公网 VPS 都可以这样描述。</p></div>
+          <div class="myth"><span class="term">“三网优化”</span><b>要求看三份独立证据</b><p>分别检查电信、联通、移动的去程、回程和晚高峰，而不是只看一个测试 IP。</p></div>
+          <div class="myth"><span class="term">“CN2 线路”</span><b>不一定是 CN2 GIA</b><p>AS Path 出现 <code>AS4809</code> 或 traceroute 出现 <code>59.43.*</code>，不能单独证明合同产品等级。</p></div>
+          <div class="myth"><span class="term">“BGP 线路”</span><b>只说明可以动态选路</b><p>BGP 不是高质量的同义词；选路可能更灵活，也可能只是把多条廉价 Transit 混在一起。</p></div>
+          <div class="myth"><span class="term">“大陆直连”</span><b>必须补齐方向与运营商</b><p>应追问哪一网、哪个方向、哪个 IP 段、在哪个境外 PoP 交接，以及高峰是否保持。</p></div>
+          <div class="myth"><span class="term">“原生 IP”</span><b>与线路质量不是一回事</b><p>IP 的注册或内容平台识别属性，不能证明路由直、延迟低或晚高峰稳定。</p></div>
+        </div>
+
+        <div class="callout danger">
+          <p><strong>最危险的截图：</strong>只展示白天、单一运营商、单一方向、ICMP traceroute，并据此声称“三网精品”。这种材料最多证明当时一条路径可见。</p>
+        </div>
+      </section>
+
+      <section id="regions">
+        <span class="section-no">06 / REGIONS</span>
+        <h2>地区怎么选：先看运营商，再看城市</h2>
+        <p class="lead">下面是大众常见体验的概括，不是 SLA。实际结果会随省份、前缀、上下游、时段和方向变化。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>地区</th><th>普通线路常见特征</th><th>对大陆较友好的网络线索</th><th>购买提醒</th></tr></thead>
+            <tbody>
+              <tr><td><b>中国香港</b></td><td><span class="good">物理距离最近</span>，但 Cogent、GTT 等普通 Transit 仍可能绕日本、新加坡或美西。</td><td>CMI / CMIN2、CUG、PCCW、Telstra、HGC；分别核对三网。</td><td>低价热门线路晚高峰易拥塞；“香港”本身不等于低延迟。</td></tr>
+              <tr><td><b>日本</b></td><td>线路资源丰富；不同骨干对三网差异明显。</td><td>SoftBank 对中国整体口碑较好；IIJ 常较均衡；NTT、KDDI 对特定网络组合也不错。</td><td>NTT 到电信 163 热门互联有高峰拥塞口碑；移动可能经香港。</td></tr>
+              <tr><td><b>韩国</b></td><td>地理近，但国际互联容量通常不如香港、日本充裕。</td><td>KT、SK Broadband、LG U+；CN2、联通 9929 组合常见较好体验。</td><td>移动可能绕香港，晚高峰抖动更值得测。</td></tr>
+              <tr><td><b>新加坡</b></td><td><span class="mixed">区域枢纽</span>，但到大陆绕香港、日本甚至美西并不少见。</td><td>Singtel、Telstra、Tata；联通方向常比电信更友好，移动关注 CMI。</td><td>服务器城市比不上游网络更能解释体验。</td></tr>
+              <tr><td><b>中国台湾</b></td><td>延迟通常低，三网一致性不如地理距离看起来那么简单。</td><td>HiNet、TWGate 通常对电信和移动较直接。</td><td>联通方向更依赖具体入口和回程。</td></tr>
+              <tr><td><b>中国澳门</b></td><td>距离近、市场小，同一运营商不同产品差异可能很大。</td><td>CTM 优化产品、China Telecom Macau 的 CN2 / CTGNet 路径。</td><td>普通国际产品仍可能绕行；先要测试 IP。</td></tr>
+              <tr><td><b>美国西海岸</b></td><td>跨太平洋资源多，基础 RTT 高于东亚；廉价大带宽选择多。</td><td>HE 对联通 169 常有性价比；精品产品关注 CN2、9929、CMI/CMIN2 接入。</td><td>“洛杉矶”不保证中国直连，机房网络和上游比城市名重要。</td></tr>
+              <tr><td><b>欧洲</b></td><td><span class="risk">物理时延高</span>，普通线路可能绕美；优化主要是减少绕行和拥塞。</td><td>联通 9929 常有较稳定组合；Arelion、Cogent、RETN 等表现取决于中国落地。</td><td>任何宣传都无法把欧洲 RTT 变成东亚水平。</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="fine-print">网络名称只是排查线索，不构成厂商或产品推荐。即便同一 ASN，不同机房、不同下游和不同 IP 前缀也会有不同策略。</p>
+      </section>
+
+      <section id="checklist">
+        <span class="section-no">07 / BUYER CHECKLIST</span>
+        <h2>购买前，按这七步验证</h2>
+
+        <ol class="steps">
+          <li><b>先问清使用场景</b><p>网页、下载能容忍抖动；SSH、远程桌面、游戏、语音更依赖低抖动和稳定单线程。场景不同，预算应放在不同地方。</p></li>
+          <li><b>索要测试 IP 和 Looking Glass</b><p>没有可公开测试的目标，就无法确认 Origin AS、上游、路由和高峰表现。仅看商家截图不够。</p></li>
+          <li><b>分别测试电信、联通、移动</b><p>至少选择与你真实用户同省或邻近区域的三个探测点。不要用某一网的结果代替“三网”。</p></li>
+          <li><b>同时看去程和回程</b><p>本地 traceroute 主要观察去程；回程要用服务器 Looking Glass、分布式探针或厂商提供的反向路由。</p></li>
+          <li><b>在晚高峰做 MTR</b><p>建议 20:00–23:00 连续采样，观察终点 RTT、抖动和持续到终点的丢包。中间节点不回 ICMP 不等于转发丢包。</p></li>
+          <li><b>测单线程，也测多线程</b><p>多线程跑满不能掩盖单连接质量差；远程操作和小文件传输常更接近单线程体验。</p></li>
+          <li><b>核对产品边界</b><p>月流量、端口速率、共享比例、DDoS 清洗、路由故障时是否降级到普通线路，都比“精品”两个字更具体。</p></li>
+        </ol>
+
+        <div class="callout">
+          <p><strong>最低限度的合格证据：</strong>测试日期与时区、源城市与运营商、目标 IP、去/回程方向、AS Path 或 traceroute、晚高峰 MTR、单/多线程吞吐。缺少这些字段，结论只能算经验线索。</p>
+        </div>
+      </section>
+
+      <section id="conclusion">
+        <span class="section-no">08 / DECISION</span>
+        <h2>最后怎么选？让线路匹配你的损失函数</h2>
+
+        <div class="decision">
+          <div class="decision-row"><b>预算有限，主要下载或建站</b><span>优先选靠近用户的普通线路，重点看晚高峰吞吐；联通用户在日本、美西常能找到性价比路线。</span></div>
+          <div class="decision-row"><b>重视交互、远程办公</b><span>优先低抖动和稳定回程。选择对应本地运营商的精品承载，通常比盲目购买更高配置有效。</span></div>
+          <div class="decision-row"><b>服务三网公众用户</b><span>选择真实多线 BGP 或三网分别优化的产品，并用三网探针验证；不要把单网精品当成三网精品。</span></div>
+          <div class="decision-row"><b>大流量且能容忍偶发波动</b><span>普通国际线路的大带宽更划算；可用 CDN、多节点、智能 DNS 或应用层容错改善体验。</span></div>
+          <div class="decision-row"><b>业务中断成本很高</b><span>不要只买“线路名”。需要多区域、多上游、可观测性和明确 SLA，必要时做主动故障切换。</span></div>
+        </div>
+
+        <p class="lead"><strong>一句话结论：</strong>机房位置决定物理下限，上游和 BGP 决定实际路径，互联容量决定高峰体验；精品网买的是更可控的路径，但只有与你的运营商、方向和时段匹配时才有价值。</p>
+      </section>
+
+      <section id="sources">
+        <span class="section-no">09 / SOURCES</span>
+        <h2>事实边界与延伸阅读</h2>
+        <p>本文是基于仓库中的 <a href="asn-route.md">《ASN、骨干网与跨境路由参考》</a>重新编写的购买者科普版。ASN 登记和网络角色属于相对稳定事实；“稳定、拥塞、友好、绕路”等地区经验来自行业材料和用户观测，不是 SLA，也不能保证任意省份、前缀、时段与方向一致。</p>
+
+        <ul class="source-list">
+          <li><a href="https://www.rfc-editor.org/rfc/rfc4271.html">RFC 4271：Border Gateway Protocol 4</a>，BGP 协议基础。</li>
+          <li><a href="https://wq.apnic.net/">APNIC WHOIS</a>，查询 ASN 与 IP 资源登记。</li>
+          <li><a href="https://stat.ripe.net/">RIPEstat</a>、<a href="https://www.peeringdb.com/">PeeringDB</a>，查询公开路由状态、邻接与互联位置线索。</li>
+          <li><a href="https://ipms.chinatelecomglobal.com/">China Telecom Global IP Network</a>，电信全球 IP 网络与 Looking Glass。</li>
+          <li><a href="https://www.cmi.chinamobile.com/pdf/zaqxwwtgblephes/Peering_Policy_For_External.pdf">China Mobile International Peering Policy</a>，CMI 网络与对等政策。</li>
+          <li><a href="https://www.miit.gov.cn/zcfg/xxtxl/art/2009/art_743e180625b541b0800931226bbad38a.html">工信部《国际通信出入口局管理办法》</a>，国际通信出入口的法定分类和边界。</li>
+          <li><a href="https://www.submarinecablemap.com/">TeleGeography Submarine Cable Map</a>，全球海缆和登陆点参考。</li>
+        </ul>
+        <p class="fine-print">最后更新：2026-07-29。购买前请使用厂商测试 IP 和你自己的三网探测结果复核；路由是动态状态，历史截图不能代替当前观测。</p>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span>VPS 线路选择指南</span>
+      <span>基于 asn-route.md 整理 · 不构成厂商或产品推荐</span>
+    </div>
+  </footer>
+
+  <script>
+    const progress = document.querySelector('.progress');
+    const tocLinks = [...document.querySelectorAll('.toc a')];
+    const sections = tocLinks.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+
+    function updateReadingState() {
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.width = `${Math.min(100, Math.max(0, ratio * 100))}%`;
+
+      let active = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) active = section;
+      }
+      tocLinks.forEach(link => {
+        const selected = link.getAttribute('href') === `#${active.id}`;
+        link.classList.toggle('active', selected);
+        if (selected) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+      });
+    }
+
+    updateReadingState();
+    window.addEventListener('scroll', updateReadingState, { passive: true });
+    window.addEventListener('resize', updateReadingState);
+  </script>
+</body>
+</html>

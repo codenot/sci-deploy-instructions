@@ -1,7 +1,7 @@
 # 服务器部署清单
 
-> 更新时间：2026-07-27T02:36:00Z
-> 来源：对 `kr`、`tw`、`hk-lc`、`vn`、`us`、`us-rak-1`、`us-rak-2`、`us-dedirock`、`jp` 九个 SSH alias 做状态采集，并补充 `gz` 的 Tailscale DERP 部署结果、`hk-lc` 的 Headscale/Tailscale 部署结果、`kr`/`gz` 切换到自建 Headscale 的结果、`hk-lc` Headscale 发布 `gz` 自建 DERP 的结果，以及 `kr` 的 Miaomiaowu、grok2api 和 Docker 转发策略调整结果；记录包括 `hostname`、`/etc/os-release`、`docker ps`、`ss -lntup`、`systemctl is-active`、`/opt` 目录和 compose 文件路径。
+> 更新时间：2026-07-31T02:03:00Z
+> 来源：对 `kr`、`tw`、`hk-lc`、`hk-zouter`、`de-lc`、`vn`、`us`、`us-rak-1`、`us-rak-2`、`us-dedirock`、`jp` 十一个 SSH alias 做状态采集，并补充 `gz` 的 Tailscale DERP 部署结果、`hk-lc` 的 Headscale/Tailscale 部署结果、`kr`/`gz` 切换到自建 Headscale 的结果、`hk-lc` Headscale 发布 `gz` 自建 DERP 的结果，以及 `kr` 的 Miaomiaowu、grok2api 和 Docker 转发策略调整结果；记录包括 `hostname`、`/etc/os-release`、`docker ps`、`ss -lntup`、`systemctl is-active`、`/opt` 目录和 compose 文件路径。
 > 记录原则：本文只记录服务器 alias、服务、目录、容器名和端口用途；不要记录真实 IP、真实域名、token、密码、API key、订阅地址或 Remnawave Node `SECRET_KEY`。
 
 ## 总览
@@ -11,6 +11,8 @@
 | `kr` | `VM-0-10-ubuntu` | Ubuntu 24.04 | 主控/多服务服务器 | Caddy、Komari Server、Remnawave Panel、Remnawave Node、Marzban、s-ui、Sub-Store、SillyTavern、Miaomiaowu、grok2api、Tailscale、sub2api、new-api/cli-proxy-api 等 |
 | `tw` | `taiwan` | Ubuntu 24.04 | 台湾节点/辅助服务 | Remnawave Node、Hiddify Manager、sub2api、Caddy、cloudflared、Tailscale |
 | `hk-lc` | `hongkong-annual` | Ubuntu 24.04 | 香港节点/Headscale 控制面 | Remnawave Node、Headscale、Caddy、Tailscale |
+| `hk-zouter` | `ZT8500160186` | Debian 13 | 香港节点 | Remnawave Node、Komari Agent |
+| `de-lc` | `ser2931369419` | Ubuntu 24.04 | 德国节点 | Remnawave Node、Komari Agent |
 | `vn` | `C20260320147399` | Ubuntu 24.04 | 越南节点 | Remnawave Node、nginx |
 | `us` | `racknerd-48395a9` | Ubuntu 24.04 | 美国节点 | Remnawave Node、Komari Agent |
 | `us-rak-1` | `NCPE1FLGHOUBCP` | Ubuntu 24.04 | 美国节点 | Remnawave Node、Komari Agent |
@@ -124,6 +126,51 @@
 - `*:2222` 是 Remnawave Node 控制 API，需要确认只允许 Remnawave Panel 控制链路访问。
 - `25083/tcp` 是订阅 Host“越南 - 香港中转”的入口，流量由 `hk-lc` 转发到 `vn` 的 Remnawave Shadowsocks 2022 入站。
 - Shadowsocks 2022 中继依赖两端时钟接近；若“越南 - 香港中转”等经 `hk-lc` 的中继无响应，应先检查 `timedatectl show -p NTPSynchronized` 和 `timedatectl timesync-status`，避免时间偏差触发协议时间戳校验失败。
+
+## `hk-zouter`
+
+### 基础状态
+
+- Docker：`active`，Engine `29.7.0`，Docker Compose `5.3.1`。
+- TCP 拥塞控制：`bbr`；默认 qdisc：`fq`。
+- IPv4 `FORWARD` 为 `ACCEPT`；Docker 使用 `/etc/docker/daemon.json` 的 `ip-forward-no-drop: true`。
+- 机器内存约 768 MiB，已配置 1 GiB `/swapfile` 并写入 `/etc/fstab`。
+
+### 已部署服务
+
+| 服务 | 部署目录 | 运行形态 | 监听/暴露 |
+|---|---|---|---|
+| Remnawave Node | `/opt/remnawave-node` | Docker 容器 `remnawave-node`，`network_mode: host` | `*:2222` 控制 API、`*:25080` 代理入站 |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
+
+### 注意事项
+
+- Remnawave Panel 中节点名称为 `hk-zouter-node`，只关联 `Default-Profile` 的 `VLESS-Reality-25080` 入站；订阅 Host 为“香港 - Zouter”；Komari 中节点名称为 `hk-zouter`。
+- `2222/tcp` 由 `remnawave-node-firewall.service` 在宿主机 `INPUT` 限制为只允许 `kr` Panel 固定出口访问；IPv6 对该端口直接拒绝。云安全组也应保持相同入口策略。
+- `25080/tcp` 是正式 VLESS/Reality 代理入站，需要在云安全组中开放。
+- Docker、sysctl、nftables/iptables、ip6tables、fstab 和 systemd 初始状态备份位于 `/root/pre-deploy-backup/<TIMESTAMP>/`；Remnawave 与 Komari 控制面变更前备份分别位于 `kr` 的 `/opt/<service>/backup/` 目录。
+
+## `de-lc`
+
+### 基础状态
+
+- Docker：`active`，Engine `29.6.2`，Docker Compose `5.3.1`。
+- TCP 拥塞控制：`bbr`；默认 qdisc：`fq`。
+- IPv4 `FORWARD` 为 `ACCEPT`；Docker 使用 `/etc/docker/daemon.json` 的 `ip-forward-no-drop: true`。
+
+### 已部署服务
+
+| 服务 | 部署目录 | 运行形态 | 监听/暴露 |
+|---|---|---|---|
+| Remnawave Node | `/opt/remnawave-node` | Docker 容器 `remnawave-node`，`network_mode: host` | `*:2222` 控制 API、`*:25080` 代理入站 |
+| Komari Agent | `/opt/komari-agent` | systemd 服务 `komari-agent` | 主动连接 `kr` Komari HTTPS 入口；Web SSH 已禁用 |
+
+### 注意事项
+
+- Remnawave Panel 中节点名称为 `de-lc-node`，只关联 `Default-Profile` 的 `VLESS-Reality-25080` 入站；订阅 Host 为“德国 - LightCone”；Komari 中节点名称为 `de-lc`。
+- `2222/tcp` 由 `remnawave-node-firewall.service` 在宿主机 `INPUT` 限制为只允许 `kr` Panel 固定出口访问；IPv6 对该端口直接拒绝。云安全组也应保持相同入口策略。
+- `25080/tcp` 是正式 VLESS/Reality 代理入站，需要在云安全组中开放。
+- Docker、sysctl、iptables、ip6tables 和 systemd 初始状态备份位于 `/root/pre-deploy-backup/<TIMESTAMP>/`；Remnawave 与 Komari 控制面变更前备份分别位于 `kr` 的 `/opt/<service>/backup/` 目录。
 
 ## `vn`
 
@@ -298,7 +345,7 @@
 
 ## 通用运维规则
 
-- `kr`、`tw`、`hk-lc`、`vn`、`us`、`us-rak-1`、`us-rak-2`、`us-dedirock`、`jp`、`gz` 已启用 TCP BBR，运行基线为 `net.ipv4.tcp_congestion_control=bbr` 和 `net.core.default_qdisc=fq`；除已有配置的 `kr` 外，其余节点使用 `/etc/sysctl.d/99-bbr.conf` 和 `/etc/modules-load.d/bbr.conf` 持久化。
+- `kr`、`tw`、`hk-lc`、`hk-zouter`、`de-lc`、`vn`、`us`、`us-rak-1`、`us-rak-2`、`us-dedirock`、`jp`、`gz` 已启用 TCP BBR，运行基线为 `net.ipv4.tcp_congestion_control=bbr` 和 `net.core.default_qdisc=fq`；除已有配置的 `kr` 外，其余节点使用 `/etc/sysctl.d/99-bbr.conf` 和 `/etc/modules-load.d/bbr.conf` 持久化。
 - 修改任何线上配置前，先按服务文档备份对应目录、数据库或防火墙规则。
 - Remnawave Node 的 `NODE_PORT` 默认是 `2222`，它是 Panel 控制 Node 的 API 端口，不是用户代理端口；不要把它当作订阅里的节点端口。
 - 新增 Remnawave Node 或调整入站时，先看 [services/remnawave.md](./services/remnawave.md) 的「部署 Remnawave Node」章节。
@@ -309,7 +356,7 @@
 ## 只读刷新命令
 
 ```bash
-for host in kr tw hk-lc vn us us-rak-1 us-rak-2 us-dedirock jp gz; do
+for host in kr tw hk-lc hk-zouter de-lc vn us us-rak-1 us-rak-2 us-dedirock jp gz; do
   printf "\n### %s\n" "$host"
   ssh "$host" '
     hostname
