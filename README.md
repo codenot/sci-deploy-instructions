@@ -6,6 +6,7 @@ Docker 服务默认部署在 `/opt/<service>`，宿主机挂载目录使用 `/op
 
 主文档：
 
+- [windows-local-setup.md](./windows-local-setup.md)：本机 Windows 的 Scoop 软件清单、Windows Terminal 与 PowerShell 配置记录。
 - [deployment.md](./deployment.md)：基础 Docker、目录/域名/端口约定、全链路验证、通用排查、备份习惯。
 - [servers.md](./servers.md)：当前服务器的部署服务、目录、容器和端口清单。
 - [asn-route.md](./asn-route.md)：ASN/BGP 基础、中国骨干与国际网络、国际海缆/陆缆、通信出入口、全球及地区网络索引、事实源和路由观测方法。
