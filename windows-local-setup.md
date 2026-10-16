@@ -57,7 +57,7 @@
 | extras | https://github.com/ScoopInstaller/Extras |
 | nerd-fonts | https://github.com/matthewjberger/scoop-nerd-fonts |
 
-Scoop 配置中设置了本机代理 `127.0.0.1:7897`，仓库为 `https://github.com/ScoopInstaller/Scoop`、分支为 `master`。代理只表示 Scoop 配置，不能推断其他程序都使用它；迁移时按新机器实际代理端口调整。
+Scoop 配置中设置了本机代理 `127.0.0.1:7890`，仓库为 `https://github.com/ScoopInstaller/Scoop`、分支为 `master`。代理只表示 Scoop 配置，不能推断其他程序都使用它；迁移时按新机器实际代理端口调整。
 
 ## 3. Windows Terminal 配置
 
@@ -212,4 +212,4 @@ Get-Command cat, ls, rm | Select-Object Name, CommandType, Definition
 
 `scoop export` 可用于另外保存机器可读的软件清单；本记录未生成独立导出文件。重装软件通常取当时 Bucket 提供的版本，不能保证恢复到本表的历史版本。字体、终端设置和 profile 需另行恢复。
 
-本次仅新增记录文档及仓库入口，未修改本机软件、终端、执行策略或服务配置。
+首次采集仅新增记录文档及仓库入口，未修改本机软件、终端、执行策略或服务配置。2026-10-16 后续校正：通过 `scoop config proxy 127.0.0.1:7890` 将 Scoop 代理从误配的 `127.0.0.1:7897` 改为 `127.0.0.1:7890`，并回读确认。
