@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily EasyTier config-server database backup
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+Persistent=true
+RandomizedDelaySec=15m
+Unit=easytier-config-server-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,6 @@
+[Unit]
+Description=Back up EasyTier config-server database
+
+[Service]
+Type=oneshot
+ExecStart=/opt/easytier-config-server/bin/backup

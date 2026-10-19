@@ -32,6 +32,8 @@
 | Sub-Store | `/opt/substore` | `127.0.0.1:3001`, `127.0.0.1:3002` | 前端和后端只给 Caddy 反代 |
 | SillyTavern | `/opt/SillyTavern` | `127.0.0.1:7123` -> 容器 `8000` | 只给 Caddy 反代 |
 | Tailscale DERP | `/opt/tailscale-derp` | Caddy `443/tcp` -> 本机 `33443/tcp`，`3478/udp` | 自管 Tailscale DERP relay；上游端口不要直接暴露公网 |
+| EasyTier | `/opt/easytier` | 种子节点 `11010/tcp`、`11010/udp` | 私有组网；服务器模板不复用实例 UUID，网络密码只放服务器 |
+| EasyTier config-server | `/opt/easytier-config-server` | `127.0.0.1:11211`、`127.0.0.1:22020` -> Caddy `443/tcp` | Web 管理和配置下发控制面，不是 peer 或中转节点 |
 
 ## 常用任务索引
 
@@ -43,6 +45,7 @@
 - Sub-Store 部署、订阅聚合、`/mihomo` 重写、备份：看 `services/sub-store.md`
 - SillyTavern 部署、白名单、API 类型：看 `services/sillytavern.md`
 - Tailscale DERP relay、Caddy TLS 反代、STUN 验证：看 `services/tailscale-derp.md`
+- EasyTier 私有模式、种子节点、config-server、服务器共用模板：看 `services/easytier.md`
 - 全链路健康检查：看 `deployment.md`「7. 全链路验证」
 - 通用链路排查和基础状态采集：看 `deployment.md`「8. 通用排查」
 - 502、证书、404、timeout、unauthorized、节点不通：看对应 `services/*.md` 的「排查」章节
@@ -70,6 +73,8 @@
 - Remnawave Panel 本身不跑 Xray-core；节点代理流量需要单独部署 Remnawave Node，并在面板里通过 Config Profile、Host、Internal Squad 关联。
 - Remnawave Node 的 `NODE_PORT` 是 Panel 调 Node 的控制 API，不是用户代理端口；这是入口限制，不是 Panel 容器的出口白名单。Node 使用 host 网络时在 `INPUT` 控制来源，Node 通过 Docker 发布端口时在 `DOCKER-USER` 或云安全组控制来源。
 - Tailscale DERP 的 `33443/tcp` 是 Caddy 到 derper 的本机上游端口，不要直接暴露公网；公网只走 Caddy `443/tcp`，STUN 单独放行 `3478/udp`。
+- EasyTier config-server 的 `11211/tcp` 和 `22020/tcp` 只绑定 `127.0.0.1`；公网统一通过 Caddy `443/tcp` 提供 HTTPS/WSS。默认账号必须替换，注册必须关闭，WSS 路径中的随机节点用户名按密钥保护。
+- EasyTier config-server 适合 Docker 部署；需要创建 TUN 和修改宿主机路由的 EasyTier 节点优先使用原生二进制加 systemd，并固定 machine ID。除非有明确理由，不要为节点额外引入 host 网络和容器 capabilities。
 - 对 iptables、防火墙、安全组做变更前，必须记录当前状态或备份规则。
 - 不要把 Docker 的 `iptables` 功能设为 `false`，否则会破坏默认 bridge 的 NAT、端口映射和网络隔离。不要把运行中的 Docker 动态链整体写入静态固化文件；只固化宿主机基线策略，并让 Docker 在 daemon 启动时重建自己的链。
 - Docker 发布到 `0.0.0.0` 的端口经过 DNAT 后不一定进入宿主机 `INPUT` 链；不能只靠 `INPUT` 规则限制这类端口。内部服务优先绑定 `127.0.0.1`，需要公网限制时使用云安全组或统一的 `DOCKER-USER` 入口规则。

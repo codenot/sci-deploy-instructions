@@ -1,0 +1,21 @@
+# Exported from the local EasyTier GUI v2.6.4 on 2026-08-13.
+# The instance UUID was removed and the empty network secret was replaced with
+# an environment variable. This file records the GUI settings; use the seed or
+# peer template for Linux servers.
+
+instance_name = "easytier"
+dhcp = true
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+    "wg://0.0.0.0:11011",
+]
+
+[network_identity]
+network_name = "easytier"
+network_secret = "${ET_NETWORK_SECRET}"
+
+[flags]
+enable_quic_proxy = true
+latency_first = true
+private_mode = true

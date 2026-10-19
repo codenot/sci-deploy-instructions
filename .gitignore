@@ -1,0 +1,4 @@
+# EasyTier runtime configuration contains the real network secret.
+/examples/easytier/*.env
+/examples/easytier/*.conf
+/examples/easytier/*.toml

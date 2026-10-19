@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+deploy_root=/opt/easytier-config-server
+backup_root="$deploy_root/backup"
+stamp=$(date +%Y%m%d-%H%M%S)
+target="$backup_root/et-$stamp.db"
+
+install -d -m 0750 "$backup_root"
+python3 - "$deploy_root/data/et.db" "$target" <<'PY'
+import sqlite3
+import sys
+
+source_path, target_path = sys.argv[1:]
+source = sqlite3.connect(f"file:{source_path}?mode=ro", uri=True)
+target = sqlite3.connect(target_path)
+try:
+    source.backup(target)
+finally:
+    target.close()
+    source.close()
+PY
+
+chmod 0600 "$target"
+find "$backup_root" -maxdepth 1 -type f -name 'et-*.db' -mtime +14 -delete

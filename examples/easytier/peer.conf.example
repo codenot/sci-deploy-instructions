@@ -1,0 +1,28 @@
+# Ordinary server that joins through the public seed node. Do not add
+# instance_id: each server must generate its own identity.
+
+instance_name = "${ET_INSTANCE_NAME}"
+ipv4 = "${ET_IPV4}"
+dhcp = false
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+]
+rpc_portal = "127.0.0.1:15888"
+
+[[peer]]
+uri = "udp://${ET_SEED_HOST}:11010"
+
+[[peer]]
+uri = "tcp://${ET_SEED_HOST}:11010"
+
+[network_identity]
+network_name = "${ET_NETWORK_NAME}"
+network_secret = "${ET_NETWORK_SECRET}"
+
+[flags]
+enable_encryption = true
+enable_quic_proxy = true
+latency_first = true
+private_mode = true
+relay_network_whitelist = "${ET_NETWORK_NAME}"

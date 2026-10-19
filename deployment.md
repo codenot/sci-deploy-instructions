@@ -18,6 +18,7 @@
 | Sub-Store 订阅聚合和`/mihomo` 文件      | [services/sub-store.md](./services/sub-store.md)           |
 | SillyTavern 反代、白名单、API 设置        | [services/sillytavern.md](./services/sillytavern.md)       |
 | Tailscale DERP 自管 relay                 | [services/tailscale-derp.md](./services/tailscale-derp.md) |
+| EasyTier 私有组网、种子节点、config-server | [services/easytier.md](./services/easytier.md)           |
 | 通用链路排查、基础状态采集                | 本文件                                                    |
 
 按实际机器角色选择需要部署的服务。一台服务器不需要部署全部服务。
@@ -35,6 +36,8 @@
 /opt/substore
 /opt/SillyTavern
 /opt/tailscale-derp
+/opt/easytier
+/opt/easytier-config-server
 ```
 
 Docker 服务统一以 `/opt/<service>` 作为部署根目录，compose、环境文件和服务数据都放在这个根目录下。宿主机挂载目录使用固定语义子目录：
@@ -65,6 +68,7 @@ silly.example.com     -> SillyTavern
 marzban.example.com   -> Marzban
 remnawave.example.com -> Remnawave Panel
 sub.example.com       -> Sub-Store
+easytier.example.com  -> EasyTier config-server
 api.example.com       -> 其他 API 服务，可选
 ```
 
@@ -89,6 +93,8 @@ api.example.com       -> 其他 API 服务，可选
 | SillyTavern         |              8000 |                     127.0.0.1:7123 | 只给 Caddy 反代                          |
 | Tailscale DERP      |             33443 |              只允许本机 Caddy 访问 | DERP HTTPS 上游；公网走 Caddy`443/tcp` |
 | Tailscale DERP STUN |          3478/udp |                           3478/udp | 需要云安全组和系统防火墙放行             |
+| EasyTier 种子节点   |         11010/tcp、11010/udp |                  11010/tcp、11010/udp | 公网入口配合私有模式和强网络密码         |
+| EasyTier config-server | 11211/tcp、22020/tcp | 仅 `127.0.0.1`，公网经 Caddy `443/tcp` | Web/API 走 HTTPS，配置下发走 WSS |
 
 如果把 s-ui Reality 入站放到 `443/tcp`，同一台机器同一个公网 IP 上 Caddy 就不能同时监听 `443/tcp`。除非有独立 IP 或明确的流量分流方案，否则按上表把 Caddy 和 s-ui 入站分开。
 
@@ -208,6 +214,7 @@ Docker 发布到 `0.0.0.0` 的端口经过 DNAT 后不一定进入宿主机 `INP
 s-ui 入站端口，例如 32676/tcp
 Marzban 或其他节点入站端口，按面板配置开放
 Tailscale DERP STUN 端口，例如 3478/udp
+EasyTier 种子节点端口，例如 11010/tcp 和 11010/udp
 ```
 
 不建议直接公网暴露：

@@ -1,0 +1,9 @@
+<ET_CONFIG_SERVER_DOMAIN> {
+	@easytier_config_server path /<ET_CONFIG_SERVER_USERNAME>
+	handle @easytier_config_server {
+		reverse_proxy 127.0.0.1:22020
+	}
+
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:11211
+}
